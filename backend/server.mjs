@@ -2,6 +2,7 @@ import http from "node:http";
 import fs from "node:fs";
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
+import { createClerkClient } from '@clerk/backend';
 import { createNessieClient, nessieTrace } from './nessie.mjs';
 import { customerPayload, provisionAccount } from './provisioning.mjs';
 import { createAuthStore, publicUser, fault } from './auth.mjs';
@@ -11,7 +12,7 @@ const auth = createAuthStore(fileURLToPath(new URL('./.data/auth.json', import.m
 const insightStore = createInsightStore(fileURLToPath(new URL('./.data/insights.json', import.meta.url)));
 
 const env = {};
-for (const file of ["../.env", ".env"]) {
+for (const file of ["../.env", ".env", ".env.clerk", "../Frontend/.env.local"]) {
   const url = new URL(file, import.meta.url);
   if (fs.existsSync(url)) for (const line of fs.readFileSync(url, "utf8").split(/\r?\n/)) {
     const match = line.match(/^([A-Z_]+)=(.*)$/); if (match) env[match[1]] = match[2].trim();
@@ -22,6 +23,39 @@ const nessie = createNessieClient({
   baseUrl: process.env.NESSIE_API_BASE_URL || env.NESSIE_API_BASE_URL || 'https://prod-api.nessieisreal.com',
   auditFile: fileURLToPath(new URL('./.data/nessie-audit.jsonl', import.meta.url)),
 });
+const clerkSecretKey = process.env.CLERK_SECRET_KEY || env.CLERK_SECRET_KEY;
+const clerkPublishableKey = process.env.CLERK_PUBLISHABLE_KEY || env.CLERK_PUBLISHABLE_KEY || process.env.VITE_CLERK_PUBLISHABLE_KEY || env.VITE_CLERK_PUBLISHABLE_KEY;
+const clerkClient = clerkSecretKey && clerkPublishableKey ? createClerkClient({ secretKey: clerkSecretKey, publishableKey: clerkPublishableKey }) : null;
+const clerkAuthorizedParties = ["http://127.0.0.1:5173", "http://localhost:5173", "http://127.0.0.1:5174", "http://localhost:5174"];
+
+async function clerkIdentity(req) {
+  if (!clerkClient) throw fault(503, 'El acceso no está configurado.');
+  let userId;
+  try {
+    const headers = new Headers();
+    for (const [name, value] of Object.entries(req.headers)) if (typeof value === 'string') headers.set(name, value);
+    const url = `http://${req.headers.host || '127.0.0.1:8787'}${req.url || '/'}`;
+    const requestState = await clerkClient.authenticateRequest(new Request(url, { method: req.method, headers }), { authorizedParties: clerkAuthorizedParties, acceptsToken: 'session_token' });
+    userId = requestState.toAuth().userId;
+  } catch (error) {
+    console.warn('[auth] Clerk rechazó la sesión:', error?.code || error?.name || 'error');
+    throw fault(401, 'Tu sesión no pudo verificarse. Inicia sesión de nuevo.');
+  }
+  if (!userId) throw fault(401, 'Tu sesión no pudo verificarse. Inicia sesión de nuevo.');
+  try {
+    const user = await clerkClient.users.getUser(userId);
+    const email = user.primaryEmailAddress?.emailAddress || '';
+    return {
+      id: user.id,
+      username: user.username || email || user.id,
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      isAdmin: user.publicMetadata?.role === 'admin',
+    };
+  } catch {
+    throw fault(401, 'No se pudo recuperar tu perfil. Inicia sesión de nuevo.');
+  }
+}
 
 const requiredText = (value, label, max = 100) => {
   if (typeof value !== 'string' || !value.trim() || value.trim().length > max) throw fault(400, `${label}: campo obligatorio (máximo ${max} caracteres).`);
@@ -53,7 +87,7 @@ async function readIdentity(user) {
 }
 
 function send(res, status, body) {
-  res.writeHead(status, { "content-type": "application/json", "access-control-allow-origin": res.origin || "http://127.0.0.1:4173", "access-control-allow-credentials": "true", "vary":"Origin", "access-control-allow-methods": "GET,POST,PUT,DELETE,OPTIONS", "access-control-allow-headers": "Content-Type, X-Busynessy-Request", "cache-control":"no-store", "x-content-type-options":"nosniff" });
+  res.writeHead(status, { "content-type": "application/json", "access-control-allow-origin": res.origin || "http://127.0.0.1:4173", "access-control-allow-credentials": "true", "vary":"Origin", "access-control-allow-methods": "GET,POST,PUT,DELETE,OPTIONS", "access-control-allow-headers": "Content-Type, X-Busynessy-Request, Authorization", "cache-control":"no-store", "x-content-type-options":"nosniff" });
   res.end(JSON.stringify(body));
 }
 
@@ -80,6 +114,42 @@ http.createServer((req, res) => nessieTrace.run({ requestId: randomUUID(), deadl
     if (req.method === 'POST' && req.url === '/api/auth/logout') {
       auth.logout(req, res); return send(res, 200, { ok: true });
     }
+    if (req.method === 'POST' && req.url === '/api/auth/clerk/session') {
+      const identity = await clerkIdentity(req);
+      if (identity.isAdmin) {
+        auth.startAdmin(req, res);
+        return send(res, 200, { role: 'admin', linked: true });
+      }
+      const user = auth.findByClerkId(identity.id);
+      if (!user) return send(res, 200, { role: 'user', linked: false, profile: { firstName: identity.firstName, lastName: identity.lastName } });
+      auth.start(user, req, res);
+      return send(res, 200, { role: 'user', linked: true, user: publicUser(user) });
+    }
+    if (req.method === 'POST' && req.url === '/api/auth/clerk/provision') {
+      const identity = await clerkIdentity(req);
+      if (identity.isAdmin) throw fault(403, 'La cuenta administrativa no puede registrar una empresa.');
+      if (auth.findByClerkId(identity.id)) throw fault(409, 'Esta cuenta ya tiene una empresa vinculada.');
+      const b = await body();
+      if (typeof b.name !== 'string' || !b.name.trim() || b.name.trim().length > 100) throw fault(400, 'Escribe el nombre de tu empresa (máximo 100 caracteres).');
+      if (b.accountType && !['Checking','Savings'].includes(b.accountType)) throw fault(400, 'Tipo de cuenta inválido.');
+      const profile = customerPayload({ ...b, firstName: b.firstName || identity.firstName, lastName: b.lastName || identity.lastName });
+      const { user, result } = await auth.registerClerk({ clerkId: identity.id, username: identity.username }, async (link, linkAccount) => {
+        const customer = await nessie('/customers', { method:'POST', body:JSON.stringify(profile) });
+        const customerId = customer.objectCreated?._id;
+        if (!customerId) throw fault(502,'No se confirmó el ID del cliente. Revisa los registros antes de reintentar.');
+        link(customerId);
+        try {
+          const stored = await nessie('/customers/'+customerId);
+          if (stored._id !== customerId) throw fault(502,'No se pudo verificar el perfil del cliente.');
+          const provisioned = await provisionAccount(nessie, customerId, { nickname:b.name.trim()+' · Operación', type:b.accountType || 'Checking' }, linkAccount);
+          return { account:provisioned.objectCreated, customer:stored, verification:provisioned.verification, ...(provisioned.warning ? {warning:provisioned.warning} : {}) };
+        } catch (error) {
+          return { customer:customer.objectCreated, warning:'Tu empresa existe, pero no se confirmó el alta de la cuenta: '+error.message+' Revisa la consola antes de crear otra.' };
+        }
+      });
+      auth.start(user, req, res);
+      return send(res, 201, { user:{...publicUser(user), companyName:companyNameFromApi(user,result.account?[result.account]:[],result.customer)}, ...result });
+    }
     if (req.method === 'GET' && req.url === '/api/auth/session') {
       try {
         const user = auth.current(req);
@@ -96,42 +166,16 @@ http.createServer((req, res) => nessieTrace.run({ requestId: randomUUID(), deadl
       }
     }
     if (req.method === 'POST' && req.url === '/api/auth/admin/login') {
-      auth.throttle(req.socket.remoteAddress);
-      const b = await body();
-      if (b.username !== 'admin' || b.password !== 'password') throw fault(401, 'Usuario o contraseña incorrectos.');
-      auth.startAdmin(req, res); return send(res, 200, { role: 'admin' });
+      throw fault(410, 'Inicia sesión desde la pantalla de acceso.');
     }
     if (req.method === 'GET' && req.url === '/api/auth/admin/me') {
       auth.currentAdmin(req); return send(res, 200, { role: 'admin' });
     }
     if (req.method === 'POST' && req.url === '/api/auth/login') {
-      auth.throttle(req.socket.remoteAddress);
-      const b = await body();
-      const user = await auth.login(b.username, b.password);
-      const identity = await readIdentity(user);
-      auth.start(user, req, res); return send(res,200,identity);
+      throw fault(410, 'Inicia sesión desde la pantalla de acceso.');
     }
     if (req.method === 'POST' && req.url === '/api/auth/register') {
-      auth.throttle(req.socket.remoteAddress);
-      const b = await body();
-      const profile = customerPayload(b);
-      if (b.accountType && !['Checking','Savings'].includes(b.accountType)) throw fault(400,'Tipo de cuenta inválido.');
-      const { user, result } = await auth.register(b, async (link, linkAccount) => {
-        const customer = await nessie('/customers', { method:'POST', body:JSON.stringify(profile) });
-        const customerId = customer.objectCreated?._id;
-        if (!customerId) throw fault(502,'No se confirmó el ID del cliente. Revisa los registros antes de reintentar.');
-        link(customerId);
-        try {
-          const stored = await nessie('/customers/'+customerId);
-          if (stored._id !== customerId || stored.first_name !== profile.first_name || stored.last_name !== profile.last_name || !Object.keys(profile.address).every(field=>stored.address?.[field]===profile.address[field])) throw fault(502,'No se pudo verificar el perfil del cliente.');
-          const provisioned = await provisionAccount(nessie,customerId,{nickname:b.name.trim()+' · Operación',type:b.accountType || 'Checking'},linkAccount);
-          return { account:provisioned.objectCreated, customer:stored, verification:provisioned.verification, ...(provisioned.warning ? {warning:provisioned.warning} : {}) };
-        } catch (error) {
-          return { customer:customer.objectCreated, warning:'Tu usuario y cliente ya existen. No se confirmó el alta de la cuenta: '+error.message+' Revisa la consola antes de crear otra.' };
-        }
-      });
-      auth.start(user, req, res);
-      return send(res,201,{user:{...publicUser(user),companyName:companyNameFromApi(user,result.account?[result.account]:[],result.customer)},...result});
+      throw fault(410, 'Registra tu empresa desde la pantalla de acceso.');
     }
     const adminCustomers = async () => {
       auth.currentAdmin(req);

@@ -10,7 +10,7 @@ Referencia oficial: [documentación](https://nessieisreal.com/docs), [OpenAPI](h
 
 ## Ejecutar
 
-Requiere Node.js 18+ y curl con soporte de %header (curl 8.21.0 verificado en este equipo). Configura NESSIE_API_KEY en backend/.env, el .env del proyecto padre o el entorno. NESSIE_API_BASE_URL es opcional; por defecto usa el servidor oficial HTTPS.
+Requiere Node.js 18+. Configura NESSIE_API_KEY y CLERK_SECRET_KEY en el entorno o en archivos locales ignorados por Git. NESSIE_API_BASE_URL es opcional; por defecto usa el servidor oficial HTTPS.
 
 ```sh
 node server.mjs
@@ -20,7 +20,7 @@ Backend: http://127.0.0.1:8787. Frontend activo: ../exportacion-frontend, http:/
 
 ## Flujo de alta
 
-1. POST /api/auth/register recibe usuario, contraseña y nombre del negocio. firstName, lastName y campos de address pueden omitirse: el backend completa solo los vacíos con datos de Ciudad de México. Los campos aportados se conservan y validan.
+1. El acceso se inicia en Clerk. POST /api/auth/clerk/provision recibe el token de sesión verificado y el nombre del negocio. firstName, lastName y campos de address pueden omitirse: el backend completa solo los vacíos con datos de Ciudad de México. Los campos aportados se conservan y validan.
 2. POST /customers guarda el perfil en Nessie. Se persiste el customer_id devuelto como vínculo de autorización y se verifica nombre/dirección mediante GET /customers/{id}.
 3. POST /customers/{id}/accounts crea una cuenta Checking o Savings con saldo aleatorio entero de USD 5,000–15,000. Se guarda el account_id remoto, nunca un ID local sustituto.
 4. GET /accounts/{id} confirma cuenta, dueño y saldo inicial.
@@ -39,7 +39,7 @@ auth/me consulta perfil y cuentas remotos. El dashboard devuelve el account comp
 
 La prueba observó que el saldo de cuenta permaneció en USD 5,901 después de registrar los tres movimientos. Se muestra ese valor reportado por GET; NO se sustituye por la suma local de movimientos ni se supone liquidación inmediata del sandbox. Flujo histórico y saldo son indicadores diferentes.
 
-Nessie no autentica usuarios de BusyNessy ni almacena sus contraseñas. El backend conserva hashes scrypt, sesiones opacas y vínculos de IDs en .data/auth.json. Los alias companyName de registros antiguos son metadatos heredados: no se usan como fuente de presentación ni se vuelven a guardar en usuarios nuevos. Metas y revisiones de alertas son datos propios de la app, no recursos bancarios, en .data/insights.json.
+La identidad y el inicio/cierre de sesión los administra Clerk. El backend verifica el token recibido en /api/auth/clerk/session y crea una cookie HttpOnly de corta vida para las llamadas propias posteriores. .data/auth.json conserva únicamente el vínculo entre el ID de Clerk y los IDs remotos de customer/account; no guarda contraseñas de nuevos usuarios. El rol administrativo se concede solo cuando publicMetadata.role es admin en Clerk. Metas y revisiones de alertas son datos propios de la app, no recursos bancarios, en .data/insights.json.
 
 ## Endpoints por acción
 
@@ -47,9 +47,9 @@ Todos los endpoints Nessie llevan key como query exclusivamente desde el backend
 
 | Acción BusyNessy | Ruta del backend | Operaciones Nessie |
 |---|---|---|
-| Registrar empresa | POST /api/auth/register | POST /customers; GET /customers/{customerId}; alta de cuenta y lote descritos arriba |
+| Registrar empresa | POST /api/auth/clerk/provision con token de Clerk | POST /customers; GET /customers/{customerId}; alta de cuenta y lote descritos arriba |
 | Crear cuenta adicional | POST /api/accounts | POST /customers/{customerId}/accounts; GET /accounts/{accountId}; POST y GET del lote |
-| Iniciar/restaurar sesión | POST /api/auth/login; GET /api/auth/me | GET /customers/{customerId}; GET /customers/{customerId}/accounts |
+| Iniciar/restaurar sesión | POST /api/auth/clerk/session; GET /api/auth/me | GET /customers/{customerId}; GET /customers/{customerId}/accounts |
 | Consultar empresa | GET /api/customers | GET /customers/{customerId}; solo la empresa autenticada |
 | Listar cuentas | GET /api/accounts/{customerId} | GET /customers/{customerId}/accounts |
 | Dashboard y saldo | GET /api/dashboard/{accountId} | GET /accounts/{accountId}; GET /accounts/{accountId}/{deposits,withdrawals,purchases,bills}; GET /merchants, previa autorización |
@@ -61,7 +61,7 @@ Todos los endpoints Nessie llevan key como query exclusivamente desde el backend
 | Editar/eliminar movimiento (solo API) | PUT/DELETE /api/movements/{type}/{id} | /deposits/{id}, /withdrawal/{id}, /purchase/{id}, /bills/{id} |
 | Eliminar cuenta | DELETE /api/accounts/{accountId} | DELETE /accounts/{accountId}, irreversible |
 | Comercios | GET/POST /api/merchants | GET/POST /merchants con datos proporcionados |
-| Cerrar sesión | POST /api/auth/logout | Revocación propia de BusyNessy; Nessie no ofrece esta sesión |
+| Cerrar sesión | POST /api/auth/logout y cierre de sesión en Clerk | Revocación propia de BusyNessy; Nessie no ofrece esta sesión |
 
 No existe un endpoint genérico /transactions en la especificación consultada.
 

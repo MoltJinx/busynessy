@@ -1,5 +1,11 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { ClerkProvider } from '@clerk/react';
+import { esES } from '@clerk/localizations';
 import App from './App.jsx';
-import './index.css';
-createRoot(document.getElementById('root')).render(<React.StrictMode><App /></React.StrictMode>);
+import './styles.css';
+
+const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+if (!publishableKey) throw Error('Falta la configuración de acceso.');
+
+createRoot(document.getElementById('root')).render(<React.StrictMode><ClerkProvider publishableKey={publishableKey} localization={esES}><a className="skip-link" href="#main-content" onClick={event => { event.preventDefault(); document.getElementById('main-content')?.focus(); }}>Saltar al contenido</a><App/></ClerkProvider></React.StrictMode>);

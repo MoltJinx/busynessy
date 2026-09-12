@@ -8,7 +8,7 @@ const TTL = 8 * 60 * 60 * 1000;
 const COOKIE = 'busynessy_session';
 const digest = value => createHash('sha256').update(value).digest('hex');
 export const fault = (status, message) => Object.assign(Error(message), { status });
-export const publicUser = user => ({ id: user.id, username: user.username, companyId: user.customerId, primaryAccountId:user.accountIds?.[0] || null });
+export const publicUser = user => ({ id: user.clerkId || user.id, username: user.username, companyId: user.customerId, primaryAccountId:user.accountIds?.[0] || null });
 
 // Almacén local de desarrollo. Nunca se guardan contraseñas ni cookies en claro.
 // Un único proceso de backend debe usar este archivo; producción requiere una BD.
@@ -40,6 +40,27 @@ export function createAuthStore(filename) {
   return {
     throttle,
     linkAccount,
+    findByClerkId(clerkId) {
+      return db.users.find(user => user.clerkId === clerkId) || null;
+    },
+    async registerClerk(input, provision) {
+      const clerkId = String(input.clerkId || '').trim();
+      const username = String(input.username || '').trim().toLowerCase().slice(0, 100) || clerkId;
+      if (!clerkId) throw fault(401, 'No se pudo identificar la sesión.');
+      if (this.findByClerkId(clerkId) || pending.has(clerkId)) throw fault(409, 'Esta cuenta ya tiene una empresa vinculada.');
+      pending.add(clerkId);
+      try {
+        const user = { id: randomUUID(), clerkId, username, customerId: null, accountIds: [] };
+        const result = await provision(customerId => {
+          user.customerId = customerId;
+          db.users.push(user);
+          persist();
+        }, accountId => linkAccount(user, accountId));
+        return { user, result };
+      } finally {
+        pending.delete(clerkId);
+      }
+    },
     async register(input, provision) {
       const username = String(input.username || '').trim().toLowerCase();
       const companyName = String(input.name || '').trim();

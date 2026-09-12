@@ -29,14 +29,14 @@ export function presentResponse(value, field = '') {
   return value;
 }
 
-export async function request(route, { method = 'GET', body, signal } = {}) {
+export async function request(route, { method = 'GET', body, signal, token } = {}) {
   let response;
   try {
     response = await fetch(API_URL + route, {
       method,
       credentials: 'include',
       signal: signal || AbortSignal.timeout(method === 'GET' ? 35000 : 240000),
-      headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(method !== 'GET' ? { 'X-Busynessy-Request': '1' } : {}) },
+      headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(method !== 'GET' ? { 'X-Busynessy-Request': '1' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
   } catch (error) {
