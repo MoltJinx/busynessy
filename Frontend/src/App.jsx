@@ -1,18 +1,10 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
 import './App.css'
-import Login from './components/Login.jsx'
-import './components/Login.css'
-import DashBoard from "./components/DashBoard.jsx";
-function App() {
+import Dashboard from './components/DashBoard.jsx'
+import { initialCompanies, initialMovements } from './components/data.js'
 
-  return (
-    <>
-     <DashBoard/>
-    </>
-  )
+function App() {
+  // Vista de prueba: el dashboard recibe datos locales, no una sesión bancaria.
+  return <Dashboard company={initialCompanies[0]} movements={initialMovements} />
 }
 
 export default App
