@@ -1,29 +1,110 @@
-# busynessy
 
-> Business, not messy.
+## Tutorial: ejecutar el proyecto localmente
 
-## Predictive cash-flow intelligence for small businesses
+### 1. Requisitos
 
-Busynessy is a B2B treasury assistant for small businesses. It brings revenue and operating-expense streams into one clear view, forecasts liquidity over the next 30 days, and turns the forecast into timely working-capital recommendations.
+- Node.js 22 LTS (Node.js 20.9 o superior también funciona).
+- Una cuenta de Clerk para el acceso de usuarios.
+- Una clave de la API bancaria usada por el backend.
 
-### The problem
+### 2. Clonar el repositorio
 
-Small businesses often make day-to-day decisions without a reliable view of their upcoming cash position. Delayed payments, recurring overhead, and uneven revenue can create preventable liquidity gaps.
+```bash
+git clone https://github.com/MoltJinx/busynessy.git
+cd busynessy
+```
 
-### Our solution
+### 3. Configurar el backend
 
-Busynessy will help business owners understand **what cash is coming in, what is going out, and when action is needed**. The product will:
+Instala las dependencias:
 
-- Aggregate revenue, invoices, payroll, subscriptions, and other operating expenses.
-- Generate a forward-looking 30-day cash-flow forecast.
-- Highlight potential liquidity shortfalls and overhead pressure before they become urgent.
-- Recommend an appropriate working-capital buffer and practical next actions.
-- Let users test scenarios, such as a delayed customer payment or an unexpected expense.
+```bash
+cd backend
+npm install
+```
 
-### Challenge track
+Copia la plantilla de entorno y completa los valores privados:
 
-**SMB Cash-Flow & Working Capital Intelligence (B2B Focus)** — build predictive treasury capabilities that help small businesses forecast liquidity, manage overhead, and make better working-capital decisions.
+```bash
+copy .env.example .env.clerk
+```
 
-### MVP vision
+En macOS o Linux usa `cp .env.example .env.clerk`.
 
-For the hackathon, we will build a simple dashboard that transforms transaction data into a cash runway, a 30-day forecast, risk alerts, and clear recommendations for the owner.
+Edita `backend/.env.clerk` con estas variables:
+
+```env
+NESSIE_API_KEY=tu_clave_del_servicio
+NESSIE_API_BASE_URL=https://prod-api.nessieisreal.com
+CLERK_SECRET_KEY=tu_clave_secreta_de_clerk
+CLERK_PUBLISHABLE_KEY=tu_clave_publica_de_clerk
+```
+
+Inicia el API:
+
+```bash
+npm run dev
+```
+
+El backend queda disponible en `http://127.0.0.1:8787`.
+
+### 4. Configurar el frontend
+
+En otra terminal:
+
+```bash
+cd Frontend
+npm install
+copy .env.example .env.local
+```
+
+En macOS o Linux usa `cp .env.example .env.local`.
+
+Completa `Frontend/.env.local`:
+
+```env
+VITE_CLERK_PUBLISHABLE_KEY=tu_clave_publica_de_clerk
+```
+
+Inicia la aplicación:
+
+```bash
+npm run dev -- --host 127.0.0.1 --port 5173
+```
+
+Abre `http://127.0.0.1:5173` en el navegador.
+
+### 5. Usar la aplicación
+
+1. Selecciona **Crear una cuenta** e ingresa mediante Clerk.
+2. Completa los datos de la empresa y su dirección.
+3. La aplicación crea el cliente y sus cuentas mediante el backend.
+4. Una vez creada, consulta el panel, movimientos, gastos, pronóstico y alertas.
+5. Usa **Cerrar sesión** para terminar la sesión.
+
+La consola administrativa se abre únicamente para usuarios cuyo rol de Clerk sea `admin`.
+
+## Arquitectura
+
+| Carpeta | Responsabilidad |
+| --- | --- |
+| `Frontend/` | Aplicación React/Vite, interfaz financiera y autenticación con Clerk. |
+| `backend/` | API Node.js: autenticación, acceso a cuentas, movimientos, análisis y alertas. |
+
+El navegador se comunica solo con el backend local. Las claves privadas permanecen en archivos `.env` ignorados por Git; no las subas al repositorio.
+
+## Comprobaciones antes de entregar
+
+```bash
+# Frontend
+cd Frontend
+npm run build
+
+# Backend
+cd ../backend
+node --check server.mjs
+```
+
+## Reto
+
+**SMB Cash-Flow & Working Capital Intelligence (B2B Focus)**. BusyNessy transforma ingresos y gastos en una proyección de liquidez, alertas y recomendaciones para apoyar decisiones de capital de trabajo.
