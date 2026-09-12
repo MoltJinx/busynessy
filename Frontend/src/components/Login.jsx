@@ -11,13 +11,13 @@ export function Login() {
     alert(`Iniciando sesión con: ${email}`);
   };
   return (
-    <div>
-      <h1>Busynessy B2B</h1>
+    <div class="login-card">
+      <h1 class="titulo-login">Busynessy B2B</h1>
 
-      <h2>Iniciar sesión</h2>
+      <h2 class="subtitulo-login">Iniciar sesión</h2>
 
       <form onSubmit={handleSubmit}>
-        <div>
+        <div id="cuentabancariaform">
           <label >Cuentas bancaria:</label>
           <input
             type="email"
@@ -28,7 +28,7 @@ export function Login() {
             required
           />
         </div>
-        <div>
+        <div id="passwordform">
           <label htmlFor="password">Contraseña:</label>
           <input
             type="password"
