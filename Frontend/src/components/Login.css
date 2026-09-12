@@ -1,3 +1,46 @@
+body{
+background-color: #0f172a; 
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: system-ui, -apple-system, sans-serif;}
+
+
+  #root {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+  .login-card {
+    width: 100%;
+  max-width: 400px;
+    background-color: #141c30;
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.titulo-login{
+    font-family: inherit;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #73747a;
+}
+
+.subtitulo-login{
+    font-family: inherit;
+    font-size: 1.25rem;
+    font-weight: 400;
+    color: #6b7280;
+    margin-bottom: 20px;
+}
+
+
+
 .btn{
   width: 300px;
   padding: 12px 20px;
@@ -16,4 +59,13 @@ background: linear-gradient(135deg, #2563eb, #1d4ed8);
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
   
   transition: all 0.2s ease-in-out;
+}
+.btn:hover {
+ animation: expandbuttonsides 0.2s forwards;
+}
+
+@keyframes expandbuttonsides {
+    from{width: 300px;} to
+    {width: 320px;
+    }
 }
