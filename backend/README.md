@@ -35,3 +35,15 @@ App y consola consultan el mismo historial cada 3 segundos. Compras y facturas c
 Clave exclusivamente en servidor, nunca en Git. CORS restringido a localhost:4173 y 127.0.0.1:4173; errores de curl sanitizados. No exponer a Internet: demo local sin usuarios/roles. Producción requiere autenticación, autorización por empresa, límites de peticiones y auditoría.
 
 API: https://api.nessieisreal.com · Documentación: https://nessieisreal.com/docs
+
+## Consola de pruebas
+
+La carpeta `console/` contiene la consola de desarrollo. Permite consultar y crear movimientos, sin botones para editarlos ni eliminarlos. Conserva la gestión de cuentas y comercios. Las rutas PUT/DELETE del servidor no se han retirado; este cambio es de interfaz, no de permisos.
+
+Con el backend iniciado, desde la carpeta `backend/` ejecuta en otra terminal:
+
+```sh
+python -m http.server 4173 --bind 127.0.0.1 --directory console
+```
+
+Abre http://127.0.0.1:4173/console.html. No ejecutes otro servidor en ese puerto si ya está ocupado. Para compartir puerto con la aplicación local, sirve ambos archivos de la consola junto al frontend existente. El enlace «Abrir aplicación» requiere que esa aplicación esté servida en `/`; la consola independiente no incluye el dashboard.
