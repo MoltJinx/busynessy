@@ -266,6 +266,34 @@ http.createServer((req, res) => nessieTrace.run({ requestId: randomUUID(), deadl
       if (balance != null) throw fault(400,'El saldo inicial se genera durante el registro; no envíes un saldo local.');
       return send(res,201,await provisionAccount(nessie,customerId,{nickname:requiredText(nickname,'Nombre de cuenta'),type},() => {}));
     }
+    // Las operaciones de la consola se autorizan por empresa y cuenta antes de
+    // entrar al flujo exclusivo para titulares de una empresa.
+    const amount = value => { const n=Number(value); if(!Number.isSafeInteger(n)||n<=0||n>1e9) throw fault(400,"Usa un monto de 1 a 1,000,000,000 en dólares enteros."); return n; };
+    const payload = (type,b) => {
+      const status=b.status || (type==="bill"?"pending":"completed");
+      if (!(type==="bill"?["pending","cancelled","completed","recurring"]:["pending","cancelled","completed"]).includes(status)) throw fault(400,"Estado inválido");
+      const date=b.date;
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||Number.isNaN(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date) throw fault(400,"Fecha inválida");
+      requiredText(b.description,'Descripción',250);
+      if(type==="bill") {
+        requiredText(b.payee,'Beneficiario',120);
+        return {status,payee:String(b.payee).slice(0,120),nickname:String(b.description||"").slice(0,250),payment_amount:amount(b.amount),payment_date:date,recurring_date:new Date(date+"T12:00:00Z").getUTCDate()};
+      }
+      return {medium:"balance",status,amount:amount(b.amount),description:String(b.description||"").slice(0,250),[type==="purchase"?"purchase_date":"transaction_date"]:date,...(type==="purchase"?{merchant_id:id(b.merchantId)}:{})};
+    };
+    const kinds={deposit:"deposits",withdrawal:"withdrawal",purchase:"purchase",bill:"bills"};
+    if (req.method === 'POST' && req.url === '/api/admin/movements') {
+      const b = await body(), { accountId, type } = b;
+      await adminAccount(accountId);
+      if (type === 'transfer') throw fault(501,'Las transferencias no están habilitadas. No se ha enviado ninguna operación.');
+      if (!Object.hasOwn(kinds,type)) throw fault(400,'Tipo no permitido');
+      return send(res,201,await nessie('/accounts/'+id(accountId)+'/'+type+'s',{method:'POST',body:JSON.stringify(payload(type,b))}));
+    }
+    const adminDeleteAccount = req.url.match(/^\/api\/admin\/accounts\/([a-zA-Z0-9-]+)$/);
+    if (req.method === 'DELETE' && adminDeleteAccount) {
+      await adminAccount(adminDeleteAccount[1]);
+      return send(res,200,await nessie('/accounts/' + adminDeleteAccount[1],{method:'DELETE'}));
+    }
     // Todo lo demás exige sesión y comprueba pertenencia en el servidor.
     const user = await currentUser(req);
     if (req.method === 'GET' && req.url === '/api/auth/me') return send(res,200,await readIdentity(user));
@@ -299,34 +327,6 @@ http.createServer((req, res) => nessieTrace.run({ requestId: randomUUID(), deadl
       if (!analysis.alerts.some(a => a.id === review[2])) throw fault(404,'La alerta no existe en esta cuenta.');
       await insightStore.review(account.id,review[2],(await body()).status);
       return send(res,200,{ ok: true });
-    }
-    // El sandbox devuelve montos enteros: rechazar centavos evita que Nessie
-    // trunque silenciosamente el importe enviado por la consola.
-    const amount = value => { const n=Number(value); if(!Number.isSafeInteger(n)||n<=0||n>1e9) throw fault(400,"Usa un monto de 1 a 1,000,000,000 en dólares enteros."); return n; };
-    const payload = (type,b) => {
-      const status=b.status || (type==="bill"?"pending":"completed");
-      if (!(type==="bill"?["pending","cancelled","completed","recurring"]:["pending","cancelled","completed"]).includes(status)) throw fault(400,"Estado inválido");
-      const date=b.date;
-      if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||Number.isNaN(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date) throw fault(400,"Fecha inválida");
-      requiredText(b.description,'Descripción',250);
-      if(type==="bill") {
-        requiredText(b.payee,'Beneficiario',120);
-        return {status,payee:String(b.payee).slice(0,120),nickname:String(b.description||"").slice(0,250),payment_amount:amount(b.amount),payment_date:date,recurring_date:new Date(date+"T12:00:00Z").getUTCDate()};
-      }
-      return {medium:"balance",status,amount:amount(b.amount),description:String(b.description||"").slice(0,250),[type==="purchase"?"purchase_date":"transaction_date"]:date,...(type==="purchase"?{merchant_id:id(b.merchantId)}:{})};
-    };
-    const kinds={deposit:"deposits",withdrawal:"withdrawal",purchase:"purchase",bill:"bills"};
-    if (req.method === 'POST' && req.url === '/api/admin/movements') {
-      const b = await body(), { accountId, type } = b;
-      await adminAccount(accountId);
-      if (type === 'transfer') throw fault(501,'Las transferencias no están habilitadas. No se ha enviado ninguna operación.');
-      if (!Object.hasOwn(kinds,type)) throw fault(400,'Tipo no permitido');
-      return send(res,201,await nessie('/accounts/'+id(accountId)+'/'+type+'s',{method:'POST',body:JSON.stringify(payload(type,b))}));
-    }
-    const adminDeleteAccount = req.url.match(/^\/api\/admin\/accounts\/([a-zA-Z0-9-]+)$/);
-    if (req.method === 'DELETE' && adminDeleteAccount) {
-      await adminAccount(adminDeleteAccount[1]);
-      return send(res,200,await nessie('/accounts/' + adminDeleteAccount[1],{method:'DELETE'}));
     }
     const match=req.url.match(/^\/api\/movements\/(deposit|withdrawal|purchase|bill)\/([a-zA-Z0-9-]+)$/);
     if(match && ["PUT","DELETE"].includes(req.method)) {
