@@ -1,5 +1,7 @@
 # busynessy
 
+> 🧩 **Rama histórica de frontend.** Esta rama conserva una iteración anterior de la interfaz. La experiencia integrada y documentada actualmente vive en [`main`](https://github.com/MoltJinx/busynessy/tree/main); consulta allí el flujo vigente con Clerk, Nessie y el backend.
+
 > Business, not messy.
 
 ## Predictive cash-flow intelligence for small businesses
