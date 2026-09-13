@@ -4,7 +4,7 @@ import Dashboard from './Dashboard.jsx';
 import Console from './Console.jsx';
 import { AddressFields, Card, Field, readAddress } from './components.jsx';
 import { normalizeMovements, request, setTokenProvider } from './api.js';
-import { SiteHeader, SiteFooter, RefreshToast } from './SiteChrome.jsx';
+import { SiteHeader, SiteFooter, RefreshToast, assetUrl } from './SiteChrome.jsx';
 
 const EMPTY = { accounts: [], merchants: [], movements: [], insights: null, customer: null, companyName: '' };
 
@@ -107,7 +107,7 @@ function useRefreshNotice() {
 function AccessGate() {
   const [mode, setMode] = useState('signin');
   const signingIn = mode === 'signin';
-  return <main id="main-content" className="auth-b2b"><section className="auth-b2b-card" aria-labelledby="access-title"><header><img id="access-title" className="access-logo" src="/Busynesy-logo.png" alt="Busynessy"/><p>{signingIn ? 'Iniciar sesión' : 'Crear una cuenta'}</p></header><div className="access-switch" role="tablist" aria-label="Acceso"><button type="button" role="tab" aria-selected={signingIn} className={signingIn ? 'selected' : ''} onClick={() => setMode('signin')}>Iniciar sesión</button><button type="button" role="tab" aria-selected={!signingIn} className={!signingIn ? 'selected' : ''} onClick={() => setMode('signup')}>Crear una cuenta</button></div>{signingIn ? <SignIn appearance={ACCESS_APPEARANCE}/> : <SignUp appearance={ACCESS_APPEARANCE}/>}</section></main>;
+  return <main id="main-content" className="auth-b2b"><section className="auth-b2b-card" aria-labelledby="access-title"><header><img className="access-logo" src={assetUrl('brand-header.png')} alt="BusyNessy"/><h1 id="access-title">{signingIn ? 'Iniciar sesión' : 'Crear una cuenta'}</h1></header><div className="access-switch" role="group" aria-label="Acceso"><button type="button" aria-pressed={signingIn} className={signingIn ? 'selected' : ''} onClick={() => setMode('signin')}>Iniciar sesión</button><button type="button" aria-pressed={!signingIn} className={!signingIn ? 'selected' : ''} onClick={() => setMode('signup')}>Crear una cuenta</button></div>{signingIn ? <SignIn appearance={ACCESS_APPEARANCE}/> : <SignUp appearance={ACCESS_APPEARANCE}/>}</section></main>;
 }
 
 function AdminConsole({ onLogout }) {

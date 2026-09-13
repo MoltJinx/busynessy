@@ -247,3 +247,23 @@ button.bank-icon{color:#fff}
   .footer-inner{padding:24px 16px;gap:16px}
   .bank-shell .sidebar.expanded nav button{padding:10px 6px;font-size:.82rem}
 }
+
+/* Keep account controls independent from the banking action buttons. */
+button.account-nav-button{background:transparent!important;color:#303b40!important;box-shadow:none!important;border:1px solid transparent;min-height:44px}
+button.account-nav-button[data-active="true"],button.account-nav-button:hover{background:rgb(88 166 191 / 15%)!important;color:#174d60!important;border-color:rgb(88 166 191 / 35%)}
+.bank-shell .sidebar nav button.selected{background:rgb(88 166 191 / 18%);color:#c8effa;border:1px solid rgb(88 166 191 / 40%)}
+.auth-b2b{background:#f3f5f5;padding:24px 16px}
+.auth-b2b-card{width:min(100%,440px);padding:28px;background:#11191d;border-color:#2b3c43;box-shadow:0 12px 36px #10101020}
+.auth-b2b-card header{margin-bottom:22px}
+.auth-b2b-card .access-logo{width:152px;height:auto;margin:0 auto 20px}
+.auth-b2b-card h1{font-size:1.35rem;letter-spacing:-.02em;line-height:1.3}
+.auth-b2b .access-switch{background:#ffffff05;border-color:#ffffff25;margin-bottom:24px}
+.auth-b2b .access-switch button{color:#cbd7db;background:transparent;box-shadow:none;white-space:normal}
+.auth-b2b .access-switch button.selected{color:#d8f6ff;background:rgb(88 166 191 / 20%);border-color:rgb(88 166 191 / 65%);box-shadow:none}
+.auth-b2b .b2b-clerk-input{background:#f4f8fa!important;border-color:#9eafb6!important}
+.auth-b2b .b2b-clerk-button{min-height:50px;background:#75cbe3!important;color:#101010!important;border-color:#75cbe3!important;box-shadow:none}
+.auth-b2b .b2b-clerk-button:hover{background:#9bdef0!important;box-shadow:none}
+.auth-b2b .b2b-clerk-button:disabled{background:#293b42!important;color:#a6b6bd!important;border-color:#42555c!important;opacity:1;cursor:not-allowed;transform:none}
+.auth-b2b .b2b-clerk-social{background:#ffffff08!important;border-color:#52676f!important;color:#f4f8fa!important}
+.auth-b2b .b2b-clerk-divider{background:#ffffff25}
+@media(max-width:479px){.auth-b2b{padding:16px}.auth-b2b-card{padding:24px 20px}.auth-b2b-card .access-logo{width:136px;margin-bottom:16px}.auth-b2b-card h1{font-size:1.25rem}}
