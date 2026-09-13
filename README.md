@@ -1,6 +1,7 @@
-# BusyNessy
 # BusyNessy 💸📊
 
+> 🧩 **Rama histórica de frontend.** Esta rama conserva una iteración anterior de la interfaz. La experiencia integrada y documentada actualmente vive en [`main`](https://github.com/MoltJinx/busynessy/tree/main); consulta allí el flujo vigente con Clerk, Nessie y el backend.
+>
 > **Business, not messy.** Una brújula financiera para que las pequeñas empresas decidan con claridad.
 
 [![Producto](https://img.shields.io/badge/producto-B2B-0f766e)](https://github.com/MoltJinx/busynessy)
