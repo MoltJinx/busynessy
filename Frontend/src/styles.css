@@ -91,3 +91,38 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px #087da5
 @keyframes pull-refresh-spin{to{transform:rotate(360deg)}}
 @media(max-width:599px){.connection-bar{min-height:52px;padding:.55rem 1rem}.connection-bar .refresh-status{font-size:.78rem}.connection-bar .admin-email{max-width:calc(100vw - 144px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.account-strip{margin-bottom:1.25rem}.page-heading{margin-top:.5rem}.card{border-radius:14px}}
 @media(prefers-reduced-motion:reduce){.pull-refresh,.pull-refresh.is-refreshing{transition:none}.pull-refresh.is-refreshing .pull-refresh-spinner{animation:none}}
+
+/* Composición móvil: una sola columna con ritmo y áreas táctiles de banca. */
+@media(max-width:599px){
+  .connection-bar{justify-content:flex-end;min-height:50px;padding:.45rem 16px}
+  .connection-bar .refresh-status:empty{display:none}
+  .connection-bar .admin-email{margin-left:auto;max-width:calc(100vw - 130px)}
+  .sidebar{padding:18px 16px 16px;border-bottom:3px solid var(--accent)}
+  .side-heading{align-items:flex-start;flex-wrap:nowrap;min-height:116px}
+  .sidebar .brand{min-width:0;flex:1}
+  .sidebar .brand-logo{width:142px;max-width:100%;height:auto}
+  .sidebar .brand small{margin-top:.35rem;font-size:.64rem;letter-spacing:.11em}
+  .menu-toggle{flex:0 0 76px;min-width:76px;margin-top:3px;padding:.55rem .4rem}
+  .sidebar nav{margin-top:1rem}
+  .shell main,main{padding:20px 16px 32px}
+  .page-heading{margin:0 0 16px;gap:.5rem}
+  .page-heading h1{font-size:clamp(1.9rem,9vw,2.25rem)}
+  .account-strip{display:block;margin:0 0 20px;padding:18px 16px;border-radius:16px;border-left-width:4px;box-shadow:0 6px 18px #07131f0d}
+  .account-strip .form-grid{gap:0}
+  .account-strip .field{margin:8px 0 0}
+  .account-strip .field-label{min-height:34px;font-size:.82rem;letter-spacing:.02em}
+  .account-owner{gap:.2rem}
+  .account-owner small{font-size:.78rem;color:var(--muted)}
+  .account-owner strong{font-size:1.08rem;color:var(--ink)}
+  .account-reference{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:.8rem}
+  .account-strip select{min-height:52px;background:var(--surface);border-color:var(--accent);font-weight:650}
+  .title-row,.section-heading{margin-bottom:.75rem}
+  .metrics{gap:12px;margin:16px 0}
+  .metrics .card,.overview-grid .card{padding:18px 16px;border-radius:16px}
+  .metrics .card:not(.primary),.overview-grid .card{border-top:3px solid var(--sky)}
+  .metric-label{min-height:34px}
+  .metric{font-size:clamp(1.45rem,7vw,1.85rem);margin:.5rem 0 .2rem}
+  .card{padding:18px 16px;margin-bottom:12px;border-radius:16px}
+  .section-heading>button{min-height:44px}
+  .pull-refresh{max-width:calc(100vw - 32px);white-space:nowrap}
+}
