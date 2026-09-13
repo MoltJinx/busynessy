@@ -1,5 +1,14 @@
 // El navegador solo habla con nuestro backend. La clave permanece en el servidor.
-const API_URL = 'http://127.0.0.1:8787/api/';
+// La ruta es relativa para que funcione desde otra computadora o dispositivo.
+// Vite la redirige al backend local sin exponer sus claves al navegador.
+const API_URL = '/api/';
+let tokenProvider = null;
+
+// El token de Clerk se adjunta a cada llamada protegida. El navegador no
+// conserva una sesión propia ni credenciales de la base de datos.
+export function setTokenProvider(provider) {
+  tokenProvider = provider;
+}
 
 // Adaptación de textos para presentación; nunca se aplica a IDs, importes,
 // fechas, credenciales ni payloads enviados al banco.
@@ -29,14 +38,15 @@ export function presentResponse(value, field = '') {
   return value;
 }
 
-export async function request(route, { method = 'GET', body, signal } = {}) {
+export async function request(route, { method = 'GET', body, signal, token } = {}) {
+  const accessToken = token || await tokenProvider?.();
   let response;
   try {
     response = await fetch(API_URL + route, {
       method,
       credentials: 'include',
       signal: signal || AbortSignal.timeout(method === 'GET' ? 35000 : 240000),
-      headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(method !== 'GET' ? { 'X-Busynessy-Request': '1' } : {}) },
+      headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...(method !== 'GET' ? { 'X-Busynessy-Request': '1' } : {}), ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
   } catch (error) {

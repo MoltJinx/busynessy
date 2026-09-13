@@ -5,11 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "console": "vite --host 0.0.0.0 --port 5174 --base /consola/",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@clerk/localizations": "^4.16.1",
+    "@clerk/react": "^6.15.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
