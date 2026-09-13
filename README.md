@@ -1,8 +1,6 @@
-# BusyNessy
 # BusyNessy 💸📊
 
 > 🧪 **Rama experimental de middleware.** Contiene notas y pruebas de seguridad relacionadas con middleware. No es una línea de despliegue; para revisar el producto funcional usa [`main`](https://github.com/MoltJinx/busynessy/tree/main).
-
 > **Business, not messy.** Una brújula financiera para que las pequeñas empresas decidan con claridad.
 
 [![Producto](https://img.shields.io/badge/producto-B2B-0f766e)](https://github.com/MoltJinx/busynessy)
