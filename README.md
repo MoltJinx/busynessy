@@ -1,5 +1,7 @@
 # busynessy
 
+> ⚙️ **Rama histórica de backend.** Esta rama conserva una iteración anterior del API y la consola. La implementación de referencia, con seguridad, sincronización e integración actualizadas, vive en [`main`](https://github.com/MoltJinx/busynessy/tree/main).
+
 > Business, not messy.
 
 ## Predictive cash-flow intelligence for small businesses
