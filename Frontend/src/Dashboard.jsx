@@ -25,7 +25,7 @@ export default function Dashboard({ company, movements, onLogout, accountControl
 
   return <div className="shell">
     <aside className={menu ? 'sidebar expanded' : 'sidebar'}>
-      <div className="side-heading"><div className="brand">Busy<span>Nessy</span><small>FINANZAS EMPRESARIALES</small></div>
+      <div className="side-heading"><div className="brand"><img className="brand-logo" src="/Busynesy-logo.png" alt="Busynessy"/><small>FINANZAS EMPRESARIALES</small></div>
         <button className="menu-toggle" onClick={() => setMenu(!menu)} aria-expanded={menu} aria-controls="financial-navigation">Menú</button></div>
       <nav id="financial-navigation" aria-label="Panel financiero">
         {SECTIONS.map(([id,label]) => <button key={id} className={section === id ? 'selected' : ''} aria-current={section === id ? 'page' : undefined} onClick={() => navigate(id)}><Icon name={id}/>{label}</button>)}

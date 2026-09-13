@@ -12,7 +12,7 @@ const ACCESS_APPEARANCE = { elements: { rootBox: 'b2b-clerk-root', cardBox: 'b2b
 function AccessGate() {
   const [mode, setMode] = useState('signin');
   const signingIn = mode === 'signin';
-  return <main id="main-content" className="auth-b2b"><section className="auth-b2b-card" aria-labelledby="access-title"><header><h1 id="access-title">Busynessy B2B</h1><p>{signingIn ? 'Iniciar sesión' : 'Crear una cuenta'}</p></header><div className="access-switch" role="tablist" aria-label="Acceso"><button type="button" role="tab" aria-selected={signingIn} className={signingIn ? 'selected' : ''} onClick={() => setMode('signin')}>Iniciar sesión</button><button type="button" role="tab" aria-selected={!signingIn} className={!signingIn ? 'selected' : ''} onClick={() => setMode('signup')}>Crear una cuenta</button></div>{signingIn ? <SignIn appearance={ACCESS_APPEARANCE}/> : <SignUp appearance={ACCESS_APPEARANCE}/>}</section></main>;
+  return <main id="main-content" className="auth-b2b"><section className="auth-b2b-card" aria-labelledby="access-title"><header><img id="access-title" className="access-logo" src="/Busynesy-logo.png" alt="Busynessy"/><p>{signingIn ? 'Iniciar sesión' : 'Crear una cuenta'}</p></header><div className="access-switch" role="tablist" aria-label="Acceso"><button type="button" role="tab" aria-selected={signingIn} className={signingIn ? 'selected' : ''} onClick={() => setMode('signin')}>Iniciar sesión</button><button type="button" role="tab" aria-selected={!signingIn} className={!signingIn ? 'selected' : ''} onClick={() => setMode('signup')}>Crear una cuenta</button></div>{signingIn ? <SignIn appearance={ACCESS_APPEARANCE}/> : <SignUp appearance={ACCESS_APPEARANCE}/>}</section></main>;
 }
 
 function AdminConsole({ onLogout }) {
@@ -61,7 +61,7 @@ function AdminConsole({ onLogout }) {
 function Onboarding({ getToken, onReady }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  return <main id="main-content" tabIndex="-1" className="auth"><div className="brand">Busy<span>Nessy</span></div><p className="eyebrow">FINANZAS EMPRESARIALES</p><h1>Registra tu empresa</h1><Card><form onSubmit={async event => {
+  return <main id="main-content" tabIndex="-1" className="auth"><img className="brand-logo" src="/Busynesy-logo.png" alt="Busynessy"/><p className="eyebrow">FINANZAS EMPRESARIALES</p><h1>Registra tu empresa</h1><Card><form onSubmit={async event => {
     event.preventDefault(); setBusy(true); setError(''); const form = new FormData(event.currentTarget);
     try { const token = await getToken(); const result = await request('auth/clerk/provision', { method: 'POST', token, body: { name: form.get('name'), firstName: form.get('firstName'), lastName: form.get('lastName'), accountType: form.get('accountType'), address: readAddress(form) } }); onReady(result.user); }
     catch (failure) { setError(failure.message); } finally { setBusy(false); }

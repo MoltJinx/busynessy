@@ -38,3 +38,29 @@ main{padding:1.2rem;min-width:0}.page-heading{display:flex;justify-content:space
 .side-heading{flex-wrap:wrap}.menu-toggle{flex-shrink:0;white-space:nowrap;min-width:76px}
 dialog .button-row>button{flex:1 1 110px;white-space:nowrap}
 @media(forced-colors:active){button,.card,.badge,input,select{border:1px solid CanvasText}.chart-line,.zero-line{stroke:CanvasText}}
+
+/* Identidad visual Busynessy: azul del nombre y verde lima del isotipo. */
+:root{--ink:#17263d;--muted:#526579;--page:#eef4f9;--surface:#fff;--line:#d2dee9;--input-line:#68829d;--sky:#d9ecfa;--accent:#1769aa;--accent-strong:#0b4f88;--lime:#a5c51b;--lime-soft:#edf6c9}
+button{border-color:var(--accent);background:var(--accent);color:#fff}
+button.secondary{color:var(--accent-strong)}
+a{color:var(--accent-strong)}
+.brand-logo,.access-logo{display:block;background:transparent;border-radius:0;padding:0;object-fit:contain}
+.brand-logo{width:min(180px,100%);height:auto}
+.access-logo{width:min(280px,100%);height:auto;margin:0 auto}
+.sidebar{background:#0b1f3a}
+.sidebar .brand-logo{width:min(190px,100%)}
+.sidebar nav button.selected{background:var(--accent);color:#fff;border-color:#72c7df}
+.menu-toggle{color:var(--sky);border-color:var(--sky)}
+.auth-b2b{background:#eef4f9;color:var(--ink)}
+.auth-b2b-card{background:#0b2747;border-color:#244e76;box-shadow:0 18px 46px #0b1f3a55}
+.auth-b2b-card header p{color:#d4e5f4}
+.access-switch{background:#081d35;border-color:#42698d}
+.access-switch button{color:#d4e5f4}
+.access-switch button.selected{background:var(--accent);color:#fff;border-color:#72c7df;box-shadow:0 2px 8px #08181c66}
+.auth-b2b .b2b-clerk-label{color:#e0edf8}
+.auth-b2b .b2b-clerk-input{border-color:#5d8990!important}
+.auth-b2b .b2b-clerk-input:focus{border-color:var(--lime)!important;box-shadow:0 0 0 3px #a5c51b55!important}
+.auth-b2b .b2b-clerk-button{background:var(--accent);color:#fff;border-color:#72c7df;box-shadow:0 8px 18px #17647e66}
+.auth-b2b .b2b-clerk-social{background:#17466f;border-color:#4f7ea8}
+.auth-b2b .b2b-clerk-link{color:#9ed0f1}
+@media(hover:hover){.auth-b2b .cl-formFieldRow:hover:not(:focus-within) .b2b-clerk-input{border-color:var(--accent)!important;box-shadow:0 0 0 2px #267d9b40}.auth-b2b .b2b-clerk-button:hover{background:var(--accent-strong);box-shadow:0 10px 22px #17647e88}}
