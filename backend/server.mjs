@@ -224,9 +224,7 @@ http.createServer((req, res) => nessieTrace.run({ requestId: randomUUID(), deadl
     }
     const adminCustomers = async () => {
       await currentAdmin(req);
-      const customers = await nessie('/customers');
-      if (!Array.isArray(customers)) throw fault(502, 'No se pudo obtener el directorio de empresas.');
-      return customers;
+      return auth.linkedCustomers();
     };
     const adminCustomer = async customerId => {
       const customer = (await adminCustomers()).find(row => row._id === customerId);

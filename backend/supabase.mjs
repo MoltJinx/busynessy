@@ -100,6 +100,10 @@ export function createDataStore(supabase) {
       const rows = await result(supabase.from('accounts').select('id,nessie_id,type,nickname,balance,raw,synced_at').eq('customer_id', user.customerLocalId).order('created_at'), 'No se pudieron consultar tus cuentas.');
       return rows.map(accountShape);
     },
+    async linkedCustomers() {
+      const rows = await result(supabase.from('customers').select('nessie_id,raw').order('created_at'), 'No se pudieron consultar las empresas vinculadas.');
+      return rows.map(row => row.raw && typeof row.raw === 'object' ? row.raw : { _id: row.nessie_id });
+    },
     async updateAccount(accountId, remote) {
       const row = await result(supabase.from('accounts').update({ type: remote.type || 'Checking', nickname: remote.nickname || 'Cuenta operativa', balance: Number(remote.balance || 0), raw: remote, synced_at: now() }).eq('id', accountId).select('id,nessie_id,type,nickname,balance,raw,synced_at').single(), 'No se pudo actualizar la cuenta.');
       return accountShape(row);

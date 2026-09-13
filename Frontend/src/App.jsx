@@ -16,6 +16,7 @@ function AccessGate() {
 }
 
 function AdminConsole({ onLogout }) {
+  const { user } = useUser();
   const [customerId, setCustomerId] = useState('');
   const [accountId, setAccountId] = useState('');
   const [snapshot, setSnapshot] = useState({ customers: [], accounts: [], movements: [], merchants: [] });
@@ -53,7 +54,8 @@ function AdminConsole({ onLogout }) {
     <Field label="Empresa"><select value={customerId} onChange={event => { setCustomerId(event.target.value); setAccountId(''); }} disabled={busy}>{!snapshot.customers.length && <option value="">Sin empresas</option>}{snapshot.customers.map(row => <option key={row._id} value={row._id}>{[row.first_name, row.last_name].filter(Boolean).join(' ') || 'Empresa'}</option>)}</select></Field>
     <Field label="Cuenta"><select value={accountId} onChange={event => setAccountId(event.target.value)} disabled={busy || !customerId}>{!snapshot.accounts.length && <option value="">Sin cuentas</option>}{snapshot.accounts.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></Field>
   </div>;
-  return <><div className="connection-bar"><span role={error ? 'alert' : 'status'}>{error || 'Información actualizada'}</span><button className="secondary" onClick={() => setRefreshKey(value => value + 1)} disabled={busy}>Actualizar</button></div><Console adminMode selectors={selectors} companyId={customerId} accountId={accountId} accounts={snapshot.accounts} movements={snapshot.movements} merchants={snapshot.merchants} busy={busy || !!error} ready={!error} mutate={mutate} selectAccount={setAccountId} onLogout={onLogout}/></>;
+  const email = user?.primaryEmailAddress?.emailAddress || 'Administrador';
+  return <><div className="connection-bar"><span role={error ? 'alert' : 'status'}>{error || 'Información actualizada'}</span><span className="admin-email">Sesión administrativa: {email}</span><button className="secondary" onClick={() => setRefreshKey(value => value + 1)} disabled={busy}>Actualizar</button></div><Console adminMode selectors={selectors} companyId={customerId} accountId={accountId} accounts={snapshot.accounts} movements={snapshot.movements} merchants={snapshot.merchants} busy={busy || !!error} ready={!error} mutate={mutate} selectAccount={setAccountId} onLogout={onLogout}/></>;
 }
 
 function Onboarding({ getToken, onReady }) {
