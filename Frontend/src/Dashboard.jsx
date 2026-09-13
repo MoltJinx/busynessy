@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { AccessibilitySettings, Card, Field, Help, Icon, Metric, MovementTable, Table, Title } from './components.jsx';
 import { money, totals, statuses } from './data.js';
+import { SiteHeader, SiteFooter } from './SiteChrome.jsx';
 
 const SECTIONS = [['summary','Resumen'],['movements','Movimientos'],['expenses','Gastos'],['forecast','Pronóstico'],['health','Salud financiera'],['security','Seguridad'],['alerts','Alertas'],['settings','Ajustes']];
 
@@ -23,22 +24,20 @@ export default function Dashboard({ company, movements, onLogout, accountControl
   else if (section === 'settings') view = <SettingsView/>;
   else view = <SummaryView summary={summary} movements={movements} forecast={insights?.forecast} onShowMovements={() => navigate('movements')} onForecast={() => navigate('forecast')}/>;
 
-  return <div className="shell">
+  const searchMovements = () => { navigate('movements'); requestAnimationFrame(() => main.current?.querySelector('input[type="search"]')?.focus()); };
+  return <><SiteHeader menuOpen={menu} onMenu={() => setMenu(!menu)} onSearch={searchMovements} onHome={() => navigate('summary')}/><div className="shell bank-shell">
     <aside className={menu ? 'sidebar expanded' : 'sidebar'}>
-      <div className="side-heading"><div className="brand"><img className="brand-logo" src="/Busynesy-logo.png" alt="Busynessy"/><small>FINANZAS EMPRESARIALES</small></div>
-        <button className="menu-toggle" onClick={() => setMenu(!menu)} aria-expanded={menu} aria-controls="financial-navigation">Menú</button></div>
       <nav id="financial-navigation" aria-label="Panel financiero">
         {SECTIONS.map(([id,label]) => <button key={id} className={section === id ? 'selected' : ''} aria-current={section === id ? 'page' : undefined} onClick={() => navigate(id)}><Icon name={id}/>{label}</button>)}
       </nav>
       <div className="side-bottom"><button onClick={onLogout} disabled={sessionBusy}>Cerrar sesión</button></div>
     </aside>
     <main id="main-content" tabIndex="-1" ref={main}>
-      <header className="page-heading"><div><p className="eyebrow">TU EMPRESA</p><h1>{company.name}</h1></div></header>
+      <header className={section === 'summary' ? 'welcome-hero' : 'page-heading'}><div><p className="eyebrow">TU EMPRESA</p><h1>{company.name}</h1>{section === 'summary' && <p>Tu negocio, con las cuentas claras.<br/>Consulta tu actividad y anticipa tus próximos pasos.</p>}</div>{section === 'summary' && <button onClick={() => navigate('movements')}>Ver movimientos <span aria-hidden="true">↗</span></button>}</header>
       <div className="account-strip">{accountControls}</div>
         {section === 'settings' || ready ? view : <Card><p role="status">Cargando información de tu cuenta…</p></Card>}
-      <footer>BusyNessy · USD</footer>
     </main>
-  </div>;
+  </div><SiteFooter/></>;
 }
 
 export function SummaryView({ summary, movements, forecast, onShowMovements, onForecast }) {

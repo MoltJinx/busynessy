@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { SignIn, SignUp, UserButton, useAuth, useClerk, useUser } from '@clerk/react';
+import { SignIn, SignUp, useAuth, useClerk, useUser } from '@clerk/react';
 import Dashboard from './Dashboard.jsx';
 import Console from './Console.jsx';
 import { AddressFields, Card, Field, readAddress } from './components.jsx';
 import { normalizeMovements, request, setTokenProvider } from './api.js';
+import { SiteHeader, SiteFooter, RefreshToast } from './SiteChrome.jsx';
 
 const EMPTY = { accounts: [], merchants: [], movements: [], insights: null, customer: null, companyName: '' };
 
@@ -18,19 +19,35 @@ function PullToRefresh({ onRefresh, refreshing }) {
   useEffect(() => { refreshingRef.current = refreshing; }, [refreshing]);
 
   useEffect(() => {
+    const header = document.querySelector('.bank-header');
+    const syncHeaderHeight = () => { if (header) document.documentElement.style.setProperty('--header-h', `${header.offsetHeight}px`); };
+    syncHeaderHeight();
+    const headerObserver = header && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(syncHeaderHeight) : null;
+    headerObserver?.observe(header);
+    window.addEventListener('resize', syncHeaderHeight);
+    // Un mouse/trackpad "fino" dispara wheel al mínimo scroll hacia arriba; solo
+    // habilitamos el gesto de rueda en dispositivos de puntero "grueso" (pantallas
+    // táctiles), para que en PC el refresco solo se active con Alt+R y no se quede
+    // tapando el encabezado al navegar entre secciones.
+    const wheelGestureEnabled = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
     let startY = null;
     let pullDistance = 0;
     let wheelDistance = 0;
     let wheelTimer;
+    let cooldown = 0;
     const atTop = () => window.scrollY <= 1 && document.documentElement.scrollTop <= 1;
+    const blocked = target => refreshingRef.current || Date.now() < cooldown || document.querySelector('dialog[open]') || target?.closest?.('input,select,textarea,button,a,[role="dialog"],[role="menu"],.help-popover');
     const reset = () => { pullDistance = 0; wheelDistance = 0; setDistance(0); };
     const trigger = () => {
-      if (!refreshingRef.current) refreshRef.current?.();
+      if (!refreshingRef.current && refreshRef.current?.()) {
+        refreshingRef.current = true;
+        cooldown = Date.now() + 1500;
+      }
       reset();
     };
-    const onTouchStart = event => { startY = atTop() ? event.touches[0]?.clientY ?? null : null; };
+    const onTouchStart = event => { startY = atTop() && !blocked(event.target) && event.touches.length === 1 ? event.touches[0]?.clientY ?? null : null; };
     const onTouchMove = event => {
-      if (startY == null || !atTop() || refreshingRef.current) return;
+      if (startY == null || !atTop() || refreshingRef.current || event.touches.length !== 1) return;
       const delta = (event.touches[0]?.clientY ?? startY) - startY;
       if (delta <= 0) return reset();
       pullDistance = Math.min(96, Math.round(delta * 0.42));
@@ -39,30 +56,41 @@ function PullToRefresh({ onRefresh, refreshing }) {
     };
     const onTouchEnd = () => { if (pullDistance >= 64) trigger(); else reset(); startY = null; };
     const onWheel = event => {
-      if (!atTop() || event.deltaY >= 0 || refreshingRef.current) return;
-      wheelDistance = Math.min(96, wheelDistance + Math.min(22, Math.abs(event.deltaY) * 0.16));
+      if (!atTop() || event.deltaY >= 0 || blocked(event.target) || event.ctrlKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return reset();
+      const delta = Math.abs(event.deltaY) * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1);
+      wheelDistance = Math.min(96, wheelDistance + delta * 0.25);
       setDistance(wheelDistance);
       event.preventDefault();
       clearTimeout(wheelTimer);
       if (wheelDistance >= 64) return trigger();
-      wheelTimer = setTimeout(reset, 180);
+      wheelTimer = setTimeout(reset, 450);
     };
+    const onCancel = () => { startY = null; reset(); };
+    const onKey = event => { if (event.altKey && event.key.toLowerCase() === 'r' && !blocked(event.target)) { event.preventDefault(); trigger(); } };
+    document.documentElement.classList.add('gesture-refresh-enabled');
     window.addEventListener('touchstart', onTouchStart, { passive: true });
     window.addEventListener('touchmove', onTouchMove, { passive: false });
     window.addEventListener('touchend', onTouchEnd, { passive: true });
-    window.addEventListener('wheel', onWheel, { passive: false });
+    if (wheelGestureEnabled) window.addEventListener('wheel', onWheel, { passive: false });
+    window.addEventListener('touchcancel', onCancel, { passive: true });
+    window.addEventListener('keydown', onKey);
     return () => {
       clearTimeout(wheelTimer);
       window.removeEventListener('touchstart', onTouchStart);
       window.removeEventListener('touchmove', onTouchMove);
       window.removeEventListener('touchend', onTouchEnd);
-      window.removeEventListener('wheel', onWheel);
+      if (wheelGestureEnabled) window.removeEventListener('wheel', onWheel);
+      window.removeEventListener('touchcancel', onCancel);
+      window.removeEventListener('keydown', onKey);
+      document.documentElement.classList.remove('gesture-refresh-enabled');
+      headerObserver?.disconnect();
+      window.removeEventListener('resize', syncHeaderHeight);
     };
   }, []);
 
   const label = refreshing ? 'Actualizando información…' : distance >= 64 ? 'Suelta para actualizar' : 'Desliza para actualizar';
-  return <div className={'pull-refresh' + (refreshing ? ' is-refreshing' : '')} style={{ '--pull-distance': `${refreshing ? 88 : distance}px` }} role="status" aria-live="polite" aria-label={label}>
-    <span className="pull-refresh-spinner" aria-hidden="true"/>{label}
+  return <div className={'pull-refresh' + (refreshing ? ' is-refreshing' : '')} style={{ '--pull-distance': `${refreshing ? 88 : distance}px` }} role="status" aria-live="polite" aria-hidden={!refreshing && !distance}>
+    <span className="pull-refresh-spinner" aria-hidden="true"/>{refreshing || distance ? label : ''}
   </div>;
 }
 
@@ -128,13 +156,14 @@ function AdminConsole({ onLogout }) {
   const refresh = useCallback(() => {
     if (busy || refreshing) return;
     setRefreshing(true); setRefreshNotice('Actualizando información…'); setRefreshKey(value => value + 1);
+    return true;
   }, [busy, refreshing, setRefreshNotice]);
   const selectors = <div className="form-grid">
     <Field label="Empresa"><select value={customerId} onChange={event => { setCustomerId(event.target.value); setAccountId(''); }} disabled={busy}>{!snapshot.customers.length && <option value="">Sin empresas</option>}{snapshot.customers.map(row => <option key={row._id} value={row._id}>{[row.first_name, row.last_name].filter(Boolean).join(' ') || 'Empresa'}</option>)}</select></Field>
     <Field label="Cuenta"><select value={accountId} onChange={event => setAccountId(event.target.value)} disabled={busy || !customerId}>{!snapshot.accounts.length && <option value="">Sin cuentas</option>}{snapshot.accounts.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></Field>
   </div>;
   const email = user?.primaryEmailAddress?.emailAddress || 'Administrador';
-  return <><PullToRefresh onRefresh={refresh} refreshing={refreshing}/><div className="connection-bar"><span className="refresh-status" role={error ? 'alert' : 'status'}>{error || refreshNotice}</span><span className="admin-email">Sesión administrativa: {email}</span><UserButton/></div><Console adminMode selectors={selectors} companyId={customerId} accountId={accountId} accounts={snapshot.accounts} movements={snapshot.movements} merchants={snapshot.merchants} busy={busy || !!error} ready={!error} mutate={mutate} selectAccount={setAccountId} onLogout={onLogout}/></>;
+  return <><PullToRefresh onRefresh={refresh} refreshing={refreshing}/><RefreshToast error={error} message={refreshNotice}/><SiteHeader email={email} onHome={() => window.scrollTo({ top: 0 })}/><Console adminMode selectors={selectors} companyId={customerId} accountId={accountId} accounts={snapshot.accounts} movements={snapshot.movements} merchants={snapshot.merchants} busy={busy || refreshing || !!error} ready={!error} mutate={mutate} selectAccount={setAccountId} onLogout={onLogout}/><SiteFooter/></>;
 }
 
 function Onboarding({ getToken, onReady }) {
@@ -162,7 +191,7 @@ function SignedApplication({ initialUser, onLogout }) {
   useEffect(() => {
     let active = true;
     async function load() {
-      setReady(false);
+      if (!refreshing) setReady(false);
       try {
         const identity = await request('auth/me');
         const accountRows = identity.accounts || [];
@@ -187,9 +216,10 @@ function SignedApplication({ initialUser, onLogout }) {
   const refresh = useCallback(() => {
     if (busy || refreshing) return;
     setRefreshing(true); setRefreshNotice('Actualizando información…'); setRefreshKey(value => value + 1);
+    return true;
   }, [busy, refreshing, setRefreshNotice]);
   const controls = <div className="form-grid"><div className="account-owner"><small>Empresa</small><strong>{snapshot.companyName || user.companyName}</strong></div><Field label="Cuenta"><select value={accountId} disabled={!ready || busy} onChange={event => setAccountId(event.target.value)}>{accounts.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></Field>{customer && <div className="account-reference">Titular: {customer.first_name} {customer.last_name}</div>}</div>;
-  return <><PullToRefresh onRefresh={refresh} refreshing={refreshing}/><div className="connection-bar"><span className="refresh-status" role={error ? 'alert' : 'status'}>{error || refreshNotice || (!ready ? 'Cargando información…' : '')}</span><UserButton/></div><Dashboard company={{ name: snapshot.companyName || user.companyName || 'Tu empresa' }} movements={movements} insights={insights} accountId={accountId} busy={busy || !!error} ready={ready} sessionBusy={busy} accountControls={controls} onLogout={onLogout} onSaveGoal={goal => mutate(`insights/${accountId}/goal`, goal, 'PUT')} onReview={(alertId, status) => mutate(`insights/${accountId}/reviews/${alertId}`, { status }, 'PUT')}/></>;
+  return <><PullToRefresh onRefresh={refresh} refreshing={refreshing}/><RefreshToast error={error} message={refreshNotice}/><Dashboard company={{ name: snapshot.companyName || user.companyName || 'Tu empresa' }} movements={movements} insights={insights} accountId={accountId} busy={busy || refreshing || !!error} ready={ready} sessionBusy={busy} accountControls={controls} onLogout={onLogout} onSaveGoal={goal => mutate(`insights/${accountId}/goal`, goal, 'PUT')} onReview={(alertId, status) => mutate(`insights/${accountId}/reviews/${alertId}`, { status }, 'PUT')}/></>;
 }
 
 export default function App() {
