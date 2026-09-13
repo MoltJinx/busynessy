@@ -73,13 +73,13 @@ export function buildInitialHistory(now = new Date()) {
   return [...deposits, ...patterned, ...duplicates, ...operating].sort((a,b) => a.date.localeCompare(b.date) || a.description.localeCompare(b.description) || a.amount - b.amount);
 }
 
-export async function provisionAccount(nessie, customerId, { nickname, type = 'Checking' }, linkAccount = () => {}) {
+export async function provisionAccount(nessie, customerId, { nickname, type = 'Checking' }, linkAccount = async () => {}) {
   if (!['Checking','Savings'].includes(type)) throw apiFault(422,'Selecciona una cuenta Checking o Savings.');
   const balance = randomInt(5000,15001);
   const result = await nessie(`/customers/${customerId}/accounts`, { method:'POST', body:JSON.stringify({type,nickname,rewards:0,balance}) });
   const accountId = result.objectCreated?._id;
   if (!accountId) throw apiFault(502,'No se recibió el ID de la cuenta. No repitas el alta sin revisar las cuentas existentes.');
-  linkAccount(accountId);
+  await linkAccount(result.objectCreated);
   const createdMovementIds = [];
   const verification = { requestId:nessieTrace.getStore()?.requestId, customerId, accountId, createdMovementIds, status:'partial' };
   try {

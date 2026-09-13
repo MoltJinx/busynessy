@@ -2,5 +2,13 @@
   "name": "busynessy-backend",
   "private": true,
   "type": "module",
-  "scripts": { "dev": "node server.mjs" }
+  "scripts": {
+    "dev": "node --use-system-ca server.mjs",
+    "test": "node --test auth.test.mjs insights.test.mjs forecast.test.mjs nessie.test.mjs",
+    "migrate:local": "node --use-system-ca migrate-local-data-to-supabase.mjs"
+  },
+  "dependencies": {
+    "@clerk/backend": "^3.17.2",
+    "@supabase/supabase-js": "^2.116.0"
+  }
 }
