@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { SignIn, SignUp, UserButton, useAuth, useClerk, useUser } from '@clerk/react';
 import Dashboard from './Dashboard.jsx';
 import Console from './Console.jsx';
@@ -8,6 +8,73 @@ import { normalizeMovements, request, setTokenProvider } from './api.js';
 const EMPTY = { accounts: [], merchants: [], movements: [], insights: null, customer: null, companyName: '' };
 
 const ACCESS_APPEARANCE = { elements: { rootBox: 'b2b-clerk-root', cardBox: 'b2b-clerk-card-box', card: 'b2b-clerk-card', header: 'b2b-clerk-header', footer: 'b2b-clerk-footer', formFieldLabel: 'b2b-clerk-label', formFieldInput: 'b2b-clerk-input', formButtonPrimary: 'b2b-clerk-button', socialButtonsBlockButton: 'b2b-clerk-social', dividerLine: 'b2b-clerk-divider', dividerText: 'b2b-clerk-divider-text', formFieldAction: 'b2b-clerk-action', footerActionLink: 'b2b-clerk-link' } };
+
+function PullToRefresh({ onRefresh, refreshing }) {
+  const [distance, setDistance] = useState(0);
+  const refreshRef = useRef(onRefresh);
+  const refreshingRef = useRef(refreshing);
+
+  useEffect(() => { refreshRef.current = onRefresh; }, [onRefresh]);
+  useEffect(() => { refreshingRef.current = refreshing; }, [refreshing]);
+
+  useEffect(() => {
+    let startY = null;
+    let pullDistance = 0;
+    let wheelDistance = 0;
+    let wheelTimer;
+    const atTop = () => window.scrollY <= 1 && document.documentElement.scrollTop <= 1;
+    const reset = () => { pullDistance = 0; wheelDistance = 0; setDistance(0); };
+    const trigger = () => {
+      if (!refreshingRef.current) refreshRef.current?.();
+      reset();
+    };
+    const onTouchStart = event => { startY = atTop() ? event.touches[0]?.clientY ?? null : null; };
+    const onTouchMove = event => {
+      if (startY == null || !atTop() || refreshingRef.current) return;
+      const delta = (event.touches[0]?.clientY ?? startY) - startY;
+      if (delta <= 0) return reset();
+      pullDistance = Math.min(96, Math.round(delta * 0.42));
+      setDistance(pullDistance);
+      if (pullDistance > 10) event.preventDefault();
+    };
+    const onTouchEnd = () => { if (pullDistance >= 64) trigger(); else reset(); startY = null; };
+    const onWheel = event => {
+      if (!atTop() || event.deltaY >= 0 || refreshingRef.current) return;
+      wheelDistance = Math.min(96, wheelDistance + Math.min(22, Math.abs(event.deltaY) * 0.16));
+      setDistance(wheelDistance);
+      event.preventDefault();
+      clearTimeout(wheelTimer);
+      if (wheelDistance >= 64) return trigger();
+      wheelTimer = setTimeout(reset, 180);
+    };
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
+    window.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      clearTimeout(wheelTimer);
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('wheel', onWheel);
+    };
+  }, []);
+
+  const label = refreshing ? 'Actualizando información…' : distance >= 64 ? 'Suelta para actualizar' : 'Desliza para actualizar';
+  return <div className={'pull-refresh' + (refreshing ? ' is-refreshing' : '')} style={{ '--pull-distance': `${refreshing ? 88 : distance}px` }} role="status" aria-live="polite" aria-label={label}>
+    <span className="pull-refresh-spinner" aria-hidden="true"/>{label}
+  </div>;
+}
+
+function useRefreshNotice() {
+  const [notice, setNotice] = useState('');
+  useEffect(() => {
+    if (!notice || notice === 'Actualizando información…') return undefined;
+    const timeout = window.setTimeout(() => setNotice(''), 3200);
+    return () => window.clearTimeout(timeout);
+  }, [notice]);
+  return [notice, setNotice];
+}
 
 function AccessGate() {
   const [mode, setMode] = useState('signin');
@@ -23,6 +90,8 @@ function AdminConsole({ onLogout }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshNotice, setRefreshNotice] = useRefreshNotice();
 
   useEffect(() => {
     let active = true;
@@ -40,7 +109,13 @@ function AdminConsole({ onLogout }) {
         if (!active) return;
         setSnapshot({ customers, accounts: accounts.map(row => ({ id: row._id, name: row.nickname, balance: row.balance })), merchants, movements: dashboard ? normalizeMovements(dashboard.movements, nextAccount) : [] });
         setError('');
-      } catch (failure) { if (active) setError(failure.message); }
+        if (refreshing) setRefreshNotice('Información actualizada');
+      } catch (failure) {
+        if (active) {
+          setError(failure.message);
+          if (refreshing) setRefreshNotice('No fue posible actualizar la información.');
+        }
+      } finally { if (active) setRefreshing(false); }
     }
     load(); return () => { active = false; };
   }, [customerId, accountId, refreshKey]);
@@ -50,12 +125,16 @@ function AdminConsole({ onLogout }) {
     try { return await request(`admin/${route}`, { method, body }); }
     finally { setBusy(false); setRefreshKey(value => value + 1); }
   }
+  const refresh = useCallback(() => {
+    if (busy || refreshing) return;
+    setRefreshing(true); setRefreshNotice('Actualizando información…'); setRefreshKey(value => value + 1);
+  }, [busy, refreshing, setRefreshNotice]);
   const selectors = <div className="form-grid">
     <Field label="Empresa"><select value={customerId} onChange={event => { setCustomerId(event.target.value); setAccountId(''); }} disabled={busy}>{!snapshot.customers.length && <option value="">Sin empresas</option>}{snapshot.customers.map(row => <option key={row._id} value={row._id}>{[row.first_name, row.last_name].filter(Boolean).join(' ') || 'Empresa'}</option>)}</select></Field>
     <Field label="Cuenta"><select value={accountId} onChange={event => setAccountId(event.target.value)} disabled={busy || !customerId}>{!snapshot.accounts.length && <option value="">Sin cuentas</option>}{snapshot.accounts.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></Field>
   </div>;
   const email = user?.primaryEmailAddress?.emailAddress || 'Administrador';
-  return <><div className="connection-bar"><span role={error ? 'alert' : 'status'}>{error || 'Información actualizada'}</span><span className="admin-email">Sesión administrativa: {email}</span><button className="secondary" onClick={() => setRefreshKey(value => value + 1)} disabled={busy}>Actualizar</button></div><Console adminMode selectors={selectors} companyId={customerId} accountId={accountId} accounts={snapshot.accounts} movements={snapshot.movements} merchants={snapshot.merchants} busy={busy || !!error} ready={!error} mutate={mutate} selectAccount={setAccountId} onLogout={onLogout}/></>;
+  return <><PullToRefresh onRefresh={refresh} refreshing={refreshing}/><div className="connection-bar"><span className="refresh-status" role={error ? 'alert' : 'status'}>{error || refreshNotice}</span><span className="admin-email">Sesión administrativa: {email}</span><UserButton/></div><Console adminMode selectors={selectors} companyId={customerId} accountId={accountId} accounts={snapshot.accounts} movements={snapshot.movements} merchants={snapshot.merchants} busy={busy || !!error} ready={!error} mutate={mutate} selectAccount={setAccountId} onLogout={onLogout}/></>;
 }
 
 function Onboarding({ getToken, onReady }) {
@@ -76,6 +155,8 @@ function SignedApplication({ initialUser, onLogout }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshNotice, setRefreshNotice] = useRefreshNotice();
   const { accounts, movements, insights, customer } = snapshot;
 
   useEffect(() => {
@@ -91,14 +172,24 @@ function SignedApplication({ initialUser, onLogout }) {
         setUser(identity.user); setAccountId(nextAccount);
         setSnapshot({ accounts: accountRows.map(row => ({ id: row._id, name: row.nickname, balance: row.balance })), merchants: merchantRows, movements: dashboard ? normalizeMovements(dashboard.movements, nextAccount) : [], insights: dashboard?.insights || null, customer: identity.customer, companyName: identity.user.companyName });
         setError(''); setReady(true);
-      } catch (failure) { if (active) setError(failure.message); }
+        if (refreshing) setRefreshNotice('Información actualizada');
+      } catch (failure) {
+        if (active) {
+          setError(failure.message);
+          if (refreshing) setRefreshNotice('No fue posible actualizar la información.');
+        }
+      } finally { if (active) setRefreshing(false); }
     }
     load(); return () => { active = false; };
   }, [accountId, refreshKey]);
 
   async function mutate(route, body, method = 'POST') { setBusy(true); try { return await request(route, { method, body }); } finally { setBusy(false); setRefreshKey(value => value + 1); } }
+  const refresh = useCallback(() => {
+    if (busy || refreshing) return;
+    setRefreshing(true); setRefreshNotice('Actualizando información…'); setRefreshKey(value => value + 1);
+  }, [busy, refreshing, setRefreshNotice]);
   const controls = <div className="form-grid"><div className="account-owner"><small>Empresa</small><strong>{snapshot.companyName || user.companyName}</strong></div><Field label="Cuenta"><select value={accountId} disabled={!ready || busy} onChange={event => setAccountId(event.target.value)}>{accounts.map(row => <option key={row.id} value={row.id}>{row.name}</option>)}</select></Field>{customer && <div className="account-reference">Titular: {customer.first_name} {customer.last_name}</div>}</div>;
-  return <><div className="connection-bar"><span role={error ? 'alert' : 'status'}>{error || (ready ? 'Información actualizada' : 'Cargando información…')}</span><button className="secondary" onClick={() => setRefreshKey(value => value + 1)} disabled={busy}>Actualizar</button><UserButton/></div><Dashboard company={{ name: snapshot.companyName || user.companyName || 'Tu empresa' }} movements={movements} insights={insights} accountId={accountId} busy={busy || !!error} ready={ready} sessionBusy={busy} accountControls={controls} onLogout={onLogout} onSaveGoal={goal => mutate(`insights/${accountId}/goal`, goal, 'PUT')} onReview={(alertId, status) => mutate(`insights/${accountId}/reviews/${alertId}`, { status }, 'PUT')}/></>;
+  return <><PullToRefresh onRefresh={refresh} refreshing={refreshing}/><div className="connection-bar"><span className="refresh-status" role={error ? 'alert' : 'status'}>{error || refreshNotice || (!ready ? 'Cargando información…' : '')}</span><UserButton/></div><Dashboard company={{ name: snapshot.companyName || user.companyName || 'Tu empresa' }} movements={movements} insights={insights} accountId={accountId} busy={busy || !!error} ready={ready} sessionBusy={busy} accountControls={controls} onLogout={onLogout} onSaveGoal={goal => mutate(`insights/${accountId}/goal`, goal, 'PUT')} onReview={(alertId, status) => mutate(`insights/${accountId}/reviews/${alertId}`, { status }, 'PUT')}/></>;
 }
 
 export default function App() {
