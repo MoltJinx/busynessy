@@ -1,6 +1,58 @@
 # BusyNessy
+# BusyNessy 💸📊
+
+> **Business, not messy.** Una brújula financiera para que las pequeñas empresas decidan con claridad.
+
+[![Producto](https://img.shields.io/badge/producto-B2B-0f766e)](https://github.com/MoltJinx/busynessy)
+[![Estado](https://img.shields.io/badge/estado-MVP%20funcional-f59e0b)](https://github.com/MoltJinx/busynessy)
+[![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20Vite-61dafb)](Frontend/)
+[![Backend](https://img.shields.io/badge/backend-Node.js-339933)](backend/)
 
 Plataforma B2B para que empresas medianas entiendan sus movimientos, anticipen liquidez y reciban alertas financieras accionables.
+
+## 🌱 La idea
+
+Las pymes no suelen tener un equipo de tesorería dedicado. Sin embargo, cada día necesitan responder preguntas críticas: **¿cuánto dinero tengo?, ¿qué pagos vienen?, ¿puedo asumir un gasto nuevo?, ¿cuándo debo actuar?**
+
+BusyNessy convierte movimientos bancarios en una lectura sencilla del presente y una proyección explicable de los próximos 30 días. No pretende reemplazar el criterio del negocio: lo fortalece con contexto, señales tempranas y acciones concretas.
+
+## 🎯 Nuestra propuesta
+
+- **Visibilidad:** ingresos, gastos, saldo y flujo neto en un solo panel.
+- **Anticipación:** forecast diario de liquidez para detectar posibles déficits antes de que sean urgentes.
+- **Control:** alertas sobre duplicados, cargos atípicos, comercios nuevos y obligaciones próximas.
+- **Decisión:** metas de reserva y recomendaciones que conectan los datos con el siguiente paso.
+- **Confianza:** análisis explicable, aislamiento por empresa y roles protegidos; una alerta es una señal para revisar, no una acusación de fraude.
+
+## 👥 Para quién es
+
+1. **Dueños y responsables financieros de pymes** que necesitan una vista rápida y accionable de su caja.
+2. **Operadores y administradores** que registran cuentas, comercios y movimientos sin perder control de permisos.
+3. **Equipos de innovación financiera** que quieren explorar inteligencia de capital de trabajo sobre datos bancarios de sandbox.
+
+## ✨ Qué se puede hacer hoy
+
+- Crear una empresa y provisionar una cuenta con Clerk, Supabase y Nessie.
+- Consultar saldo e historial real del sandbox bancario.
+- Ver ingresos, gastos, obligaciones, gastos recurrentes y flujo neto.
+- Explorar un forecast de 30 días con saldo mínimo y riesgo de déficit.
+- Revisar alertas, guardar una meta de reserva y marcar revisiones.
+- Usar una consola administrativa protegida por rol para operar cuentas y movimientos.
+- Trabajar con una interfaz responsive, alto contraste y texto grande.
+
+## 🧭 Recorrido de la experiencia
+
+```text
+Clerk → onboarding de empresa → cuenta Nessie → sincronización Supabase
+	→ dashboard → insights + forecast → alerta accionable → decisión de caja
+```
+
+## 📚 Documentación
+
+- [Guía completa del producto y la arquitectura](README.md)
+- [Frontend: instalación, pantallas y scripts](Frontend/README.md)
+- [Backend: API, seguridad e integración con Nessie](backend/README.md)
+- [Mapa de ramas y flujo de trabajo](docs/BRANCHES.md)
 
 ## Tutorial: ejecutar el proyecto localmente
 

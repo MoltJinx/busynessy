@@ -1,10 +1,24 @@
-# BusyNessy · Integración Nessie
+# BusyNessy Backend 🔐💳
+
+API segura que convierte datos bancarios del sandbox Nessie en insights de liquidez para BusyNessy. Clerk resuelve la identidad, Supabase conserva vínculos y estado propio, y Nessie sigue siendo la fuente remota de cuentas, saldos y movimientos.
+
+> ⚠️ Este proyecto es un MVP de hackathon sobre sandbox. No es banca real ni asesoría financiera.
+
+## 🧠 Qué aporta el backend
+
+- Provisiona empresas y cuentas con verificación posterior.
+- Aísla empresas, cuentas y movimientos por identidad autenticada.
+- Sincroniza datos de Nessie y calcula insights y forecast explicables.
+- Protege operaciones administrativas mediante el rol `admin` de Clerk.
+- Valida payloads, limita tiempos, aplica rate limiting y evita exponer secretos.
+
+La arquitectura completa y el arranque del proyecto están en el [README raíz](../README.md).
 
 ## Resultado de la auditoría — 12 de septiembre de 2026
 
 La versión anterior ya creaba customers y accounts mediante POST reales. No había cuentas mockeadas en React; se había desactivado el lote inicial por una petición anterior. Esta revisión cambia esa política: cada alta crea datos QA en Nessie y verifica su lectura posterior.
 
-Servidor: https://prod-api.nessieisreal.com. Se comparó con el alias anterior https://api.nessieisreal.com: ambos devolvieron HTTP 200 y los mismos 12 customer IDs existentes antes de la prueba. No se migraron ni eliminaron esos datos.
+Servidor: `https://prod-api.nessieisreal.com`. Se comparó con el alias anterior `https://api.nessieisreal.com`: ambos devolvieron HTTP 200 y los mismos 12 customer IDs existentes antes de la prueba. No se migraron ni eliminaron esos datos.
 
 Referencia oficial: [documentación](https://nessieisreal.com/docs), [OpenAPI](https://nessieisreal.com/nessie-openapi-spec.yaml). La especificación describe algunas respuestas como texto e IDs de 24 caracteres, pero la instancia devuelve objectCreated._id y UUIDs. Se conservan los IDs efectivamente devueltos, sin truncarlos.
 
@@ -16,7 +30,7 @@ Requiere Node.js 18+. Configura NESSIE_API_KEY y CLERK_SECRET_KEY en el entorno 
 node server.mjs
 ```
 
-Backend: http://127.0.0.1:8787. Frontend activo: ../exportacion-frontend, http://127.0.0.1:5173/. Consola: /#consola. No se cambió la copia busynessy-github ni se hizo push.
+Backend: `http://127.0.0.1:8787`. Frontend activo: `../Frontend`, `http://127.0.0.1:5173/`. Consola administrativa: `http://127.0.0.1:5174/consola/`. La consola requiere una sesión de Clerk con rol `admin`.
 
 ## Flujo de alta
 
