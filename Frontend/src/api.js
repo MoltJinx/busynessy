@@ -1,5 +1,7 @@
 // El navegador solo habla con nuestro backend. La clave permanece en el servidor.
-const API_URL = 'http://127.0.0.1:8787/api/';
+// La ruta es relativa para que funcione desde otra computadora o dispositivo.
+// Vite la redirige al backend local sin exponer sus claves al navegador.
+const API_URL = '/api/';
 let tokenProvider = null;
 
 // El token de Clerk se adjunta a cada llamada protegida. El navegador no

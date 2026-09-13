@@ -79,6 +79,16 @@ npm run dev -- --host 127.0.0.1 --port 5173
 
 Abre `http://127.0.0.1:5173` en el navegador.
 
+### Consola administrativa en una URL independiente
+
+Con el backend activo, abre otra terminal dentro de `Frontend` y ejecuta:
+
+```bash
+npm run console
+```
+
+La consola queda en `http://127.0.0.1:5174/consola/`. Solo una sesión de Clerk con rol `admin` puede verla; los demás usuarios permanecen en su panel financiero.
+
 ### 5. Usar la aplicación
 
 1. Selecciona **Crear una cuenta** e ingresa mediante Clerk.
