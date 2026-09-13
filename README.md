@@ -1,3 +1,6 @@
+# BusyNessy
+
+Plataforma B2B para que empresas medianas entiendan sus movimientos, anticipen liquidez y reciban alertas financieras accionables.
 
 ## Tutorial: ejecutar el proyecto localmente
 
@@ -5,6 +8,7 @@
 
 - Node.js 22 LTS (Node.js 20.9 o superior también funciona).
 - Una cuenta de Clerk para el acceso de usuarios.
+- Un proyecto de Supabase con el esquema de BusyNessy.
 - Una clave de la API bancaria usada por el backend.
 
 ### 2. Clonar el repositorio
@@ -30,7 +34,6 @@ copy .env.example .env.clerk
 ```
 
 En macOS o Linux usa `cp .env.example .env.clerk`.
-
 Edita `backend/.env.clerk` con estas variables:
 
 ```env
@@ -38,6 +41,8 @@ NESSIE_API_KEY=tu_clave_del_servicio
 NESSIE_API_BASE_URL=https://prod-api.nessieisreal.com
 CLERK_SECRET_KEY=tu_clave_secreta_de_clerk
 CLERK_PUBLISHABLE_KEY=tu_clave_publica_de_clerk
+SUPABASE_URL=https://tu-proyecto.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=tu_clave_service_role_de_supabase
 ```
 
 Inicia el API:
@@ -89,9 +94,9 @@ La consola administrativa se abre únicamente para usuarios cuyo rol de Clerk se
 | Carpeta | Responsabilidad |
 | --- | --- |
 | `Frontend/` | Aplicación React/Vite, interfaz financiera y autenticación con Clerk. |
-| `backend/` | API Node.js: autenticación, acceso a cuentas, movimientos, análisis y alertas. |
+| `backend/` | API Node.js: autenticación con Clerk, persistencia en Supabase, acceso a cuentas, movimientos, análisis y alertas. |
 
-El navegador se comunica solo con el backend local. Las claves privadas permanecen en archivos `.env` ignorados por Git; no las subas al repositorio.
+El navegador se comunica solo con el backend local. Clerk gestiona la identidad; Supabase persiste perfiles, empresas, cuentas, movimientos sincronizados, metas y revisiones. Las claves privadas permanecen en archivos `.env` ignorados por Git; no las subas al repositorio.
 
 ## Comprobaciones antes de entregar
 

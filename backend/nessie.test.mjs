@@ -72,7 +72,7 @@ function accountFixture(failAt = '') {
 test('alta exige POST y luego GET de cuenta y 50 movimientos con IDs devueltos',async()=>{
   const remote=accountFixture(); let linked;
   const result=await provisionAccount(remote.request,'customer-api',{nickname:'QA',type:'Savings'},id=>linked=id);
-  assert.equal(linked,'account-api'); assert.equal(result.objectCreated.type,'Savings');
+  assert.equal(linked._id,'account-api'); assert.equal(result.objectCreated.type,'Savings');
   assert(result.objectCreated.balance>=5000&&result.objectCreated.balance<=15000);
   assert.equal(result.verification.status,'verified'); assert.equal(result.verification.createdMovementIds.length,50);
   assert.equal(result.verification.movementCount,50);

@@ -39,7 +39,7 @@ auth/me consulta perfil y cuentas remotos. El dashboard devuelve el account comp
 
 La prueba observó que el saldo de cuenta permaneció en USD 5,901 después de registrar los tres movimientos. Se muestra ese valor reportado por GET; NO se sustituye por la suma local de movimientos ni se supone liquidación inmediata del sandbox. Flujo histórico y saldo son indicadores diferentes.
 
-La identidad y el inicio/cierre de sesión los administra Clerk. El backend verifica el token recibido en /api/auth/clerk/session y crea una cookie HttpOnly de corta vida para las llamadas propias posteriores. .data/auth.json conserva únicamente el vínculo entre el ID de Clerk y los IDs remotos de customer/account; no guarda contraseñas de nuevos usuarios. El rol administrativo se concede solo cuando publicMetadata.role es admin en Clerk. Metas y revisiones de alertas son datos propios de la app, no recursos bancarios, en .data/insights.json.
+La identidad y el inicio/cierre de sesión los administra Clerk. Cada llamada protegida lleva el token de Clerk al backend, que resuelve el perfil, la empresa y las cuentas desde Supabase. No hay sesiones, contraseñas, perfiles, metas ni revisiones persistidas en archivos locales. El rol administrativo se concede solo cuando publicMetadata.role es admin en Clerk.
 
 ## Endpoints por acción
 

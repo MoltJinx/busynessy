@@ -1,5 +1,3 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { buildForecast } from './forecast.mjs';
 
@@ -104,28 +102,37 @@ export function analyzeAccount(raw, merchantRows = [], balance = null, state = {
   };
 }
 
-// Metas y revisiones son datos de la app, no movimientos de Nessie.
-export function createInsightStore(filename) {
-  fs.mkdirSync(path.dirname(filename), { recursive: true });
-  const db = fs.existsSync(filename) ? JSON.parse(fs.readFileSync(filename,'utf8')) : {};
-  const key = (companyId, accountId) => companyId + ':' + accountId;
-  const read = (companyId, accountId) => db[key(companyId,accountId)] || { goal: { target: 0, saved: 0 }, reviews: {} };
-  const save = (companyId,accountId,value) => {
-    db[key(companyId,accountId)] = value;
-    fs.writeFileSync(filename + '.tmp', JSON.stringify(db), { mode: 0o600 });
-    fs.renameSync(filename + '.tmp',filename);
+// Metas y revisiones son datos propios de la app, persistidos en Supabase.
+export function createInsightStore(supabase) {
+  const fail = (error, message) => {
+    if (!error) return;
+    console.error('[insights]', error.code || 'error', error.message || 'unknown');
+    throw Object.assign(Error(message), { status: 503 });
   };
   return {
-    read,
-    goal(companyId, accountId, input) {
-      if (![input.target,input.saved].every(v => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1e12)) throw Object.assign(Error('La meta y el ahorro registrado deben ser montos positivos o cero.'), { status: 400 });
-      const goal = { target: round(input.target), saved: round(input.saved), updatedAt: new Date().toISOString() };
-      save(companyId,accountId,{ ...read(companyId,accountId), goal }); return goal;
+    async read(accountId) {
+      const [goalResult, reviewsResult] = await Promise.all([
+        supabase.from('account_goals').select('target,saved,updated_at').eq('account_id', accountId).maybeSingle(),
+        supabase.from('alert_reviews').select('alert_id,status,updated_at').eq('account_id', accountId),
+      ]);
+      fail(goalResult.error, 'No se pudo leer la meta de la cuenta.');
+      fail(reviewsResult.error, 'No se pudieron leer las alertas de la cuenta.');
+      return {
+        goal: goalResult.data ? { target: Number(goalResult.data.target), saved: Number(goalResult.data.saved), updatedAt: goalResult.data.updated_at } : { target: 0, saved: 0 },
+        reviews: Object.fromEntries((reviewsResult.data || []).map(row => [row.alert_id, { status: row.status, updatedAt: row.updated_at }])),
+      };
     },
-    review(companyId,accountId,alertId,status) {
-      if (!['new','review','recognized'].includes(status)) throw Object.assign(Error('Estado de revisión inválido.'),{ status: 400 });
-      const current = read(companyId,accountId);
-      save(companyId,accountId,{ ...current, reviews: { ...current.reviews, [alertId]: { status, updatedAt: new Date().toISOString() } } });
+    async goal(accountId, input) {
+      if (![input.target,input.saved].every(v => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1e12)) throw Object.assign(Error('La meta y el ahorro registrado deben ser montos positivos o cero.'), { status: 400 });
+      const updatedAt = new Date().toISOString();
+      const { data, error } = await supabase.from('account_goals').upsert({ account_id: accountId, target: round(input.target), saved: round(input.saved), updated_at: updatedAt }, { onConflict: 'account_id' }).select('target,saved,updated_at').single();
+      fail(error, 'No se pudo guardar la meta de la cuenta.');
+      return { target: Number(data.target), saved: Number(data.saved), updatedAt: data.updated_at };
+    },
+    async review(accountId, alertId, status) {
+      if (!['new','review','recognized'].includes(status)) throw Object.assign(Error('Estado de revisión inválido.'), { status: 400 });
+      const { error } = await supabase.from('alert_reviews').upsert({ account_id: accountId, alert_id: alertId, status, updated_at: new Date().toISOString() }, { onConflict: 'account_id,alert_id' });
+      fail(error, 'No se pudo guardar la revisión de la alerta.');
     },
   };
 }

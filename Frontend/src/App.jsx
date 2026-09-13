@@ -3,7 +3,7 @@ import { SignIn, SignUp, UserButton, useAuth, useClerk, useUser } from '@clerk/r
 import Dashboard from './Dashboard.jsx';
 import Console from './Console.jsx';
 import { AddressFields, Card, Field, readAddress } from './components.jsx';
-import { normalizeMovements, request } from './api.js';
+import { normalizeMovements, request, setTokenProvider } from './api.js';
 
 const EMPTY = { accounts: [], merchants: [], movements: [], insights: null, customer: null, companyName: '' };
 
@@ -104,6 +104,10 @@ export default function App() {
   const { user: clerkUser } = useUser();
   const clerk = useClerk();
   const [state, setState] = useState({ status: 'loading', user: null });
+  useEffect(() => {
+    setTokenProvider(() => getToken());
+    return () => setTokenProvider(null);
+  }, [getToken]);
   useEffect(() => {
     let active = true;
     async function exchange() {

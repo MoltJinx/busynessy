@@ -1,8 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 // Datos controlados exclusivamente para las pruebas unitarias; no se envían a Nessie.
 function historyPlan(accountId, start, now = new Date()) {
   start ||= new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 3, 1)).toISOString().slice(0, 7);
@@ -81,22 +78,35 @@ test('comercio nuevo requiere historial previo suficiente', () => {
   const data = analyzeAccount(raw,merchants,0,{},now);
   assert.equal(data.alerts.filter(a => a.kind === 'new-merchant').length,1);
 });
-test('metas y revisiones persisten y se aíslan por empresa y cuenta', () => {
-  const folder = fs.mkdtempSync(path.join(os.tmpdir(),'busynessy-insights-'));
-  const filename = path.join(folder,'state.json');
-  const store = createInsightStore(filename);
+test('metas y revisiones se delegan a tablas remotas y se aíslan por cuenta', async () => {
+  const goals = new Map(), reviews = new Map();
+  const supabase = { from(table) {
+    const filters = {};
+    const query = {
+      select() { return query; },
+      eq(key, value) { filters[key] = value; return query; },
+      maybeSingle: async () => ({ data: table === 'account_goals' ? goals.get(filters.account_id) || null : null, error: null }),
+      then(resolve) { const data = table === 'alert_reviews' ? [...reviews.values()].filter(row => row.account_id === filters.account_id) : []; return Promise.resolve({ data, error: null }).then(resolve); },
+      upsert(payload) {
+        if (table === 'account_goals') goals.set(payload.account_id, { target: payload.target, saved: payload.saved, updated_at: payload.updated_at });
+        if (table === 'alert_reviews') reviews.set(`${payload.account_id}:${payload.alert_id}`, payload);
+        return { select() { return { single: async () => ({ data: { target: payload.target, saved: payload.saved, updated_at: payload.updated_at }, error: null }) }; } };
+      },
+    };
+    return query;
+  } };
+  const store = createInsightStore(supabase);
   const { raw,merchants } = fixture();
   const data = analyzeAccount(raw,merchants,0,{},now);
   const alertId = data.alerts[0].id;
-  store.goal('company-a','account-a',{target:5000,saved:1000});
-  store.review('company-a','account-a',alertId,'recognized');
-  const restored = createInsightStore(filename);
-  assert.equal(restored.read('company-a','account-a').goal.saved,1000);
-  assert.equal(restored.read('company-b','account-a').goal.saved,0);
-  assert.equal(restored.read('company-a','account-b').goal.saved,0);
-  const next = analyzeAccount(raw,merchants,0,restored.read('company-a','account-a'),now);
+  await store.goal('account-a',{target:5000,saved:1000});
+  await store.review('account-a',alertId,'recognized');
+  const restored = await store.read('account-a');
+  assert.equal(restored.goal.saved,1000);
+  assert.equal((await store.read('account-b')).goal.saved,0);
+  const next = analyzeAccount(raw,merchants,0,restored,now);
   assert.equal(next.openAlerts,data.openAlerts - 1);
   assert.equal(next.alerts.find(a => a.id === alertId).status,'recognized');
-  assert.throws(() => store.goal('a','b',{target:-1,saved:0}),e => e.status === 400);
-  assert.throws(() => store.review('a','b','alert','blocked'),e => e.status === 400);
+  await assert.rejects(store.goal('account-a',{target:-1,saved:0}),e => e.status === 400);
+  await assert.rejects(store.review('account-a','alert','blocked'),e => e.status === 400);
 });
