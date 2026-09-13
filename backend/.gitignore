@@ -3,3 +3,5 @@
 !.env.example
 node_modules/
 *.log
+.data/
+.env.clerk

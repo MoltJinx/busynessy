@@ -2,11 +2,14 @@
 import assert from 'node:assert/strict';
 if (!process.argv.includes('--sandbox-write')) throw Error('Use --sandbox-write to authorize sandbox test records');
 const api='http://127.0.0.1:8787/api/';
-async function call(route,method='GET',body){const r=await fetch(api+route,{method,...(body?{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})});const d=await r.json();assert(r.ok,`${method} ${route}: ${JSON.stringify(d)}`);return d;}
+let cookie='';
+async function call(route,method='GET',body){const r=await fetch(api+route,{method,headers:{'X-Busynessy-Request':'1',...(cookie?{Cookie:cookie}:{}),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});const d=await r.json();assert(r.ok,`${method} ${route}: ${JSON.stringify(d)}`);if(r.headers.get('set-cookie'))cookie=r.headers.get('set-cookie').split(';')[0];return d;}
+if(!process.env.BUSYNESSY_USERNAME||!process.env.BUSYNESSY_PASSWORD)throw Error('Configura BUSYNESSY_USERNAME y BUSYNESSY_PASSWORD de un usuario QA.');
+await call('auth/login','POST',{username:process.env.BUSYNESSY_USERNAME,password:process.env.BUSYNESSY_PASSWORD});
 const customers=await call('customers');assert(customers.length,'Requires an existing sandbox customer');
-let merchants=await call('merchants');if(!merchants.length){await call('merchants','POST',{name:'Busynessy QA Comercio'});merchants=await call('merchants');}
+const merchants=await call('merchants');if(!merchants.length)throw Error('Registra un comercio antes de ejecutar esta prueba.');
 const customerId=customers[0]._id;
-const account=(await call('accounts','POST',{customerId,nickname:'QA CRUD '+Date.now(),balance:10000})).objectCreated;
+const account=(await call('accounts','POST',{customerId,nickname:'QA CRUD '+Date.now()})).objectCreated;
 console.log('Test account:',account._id);
 const keys={deposit:'deposits',withdrawal:'withdrawals',purchase:'purchases',bill:'bills'};
 try{

@@ -1,4 +1,67 @@
-# React + Vite
+# BusyNessy Frontend 🖥️
+
+El frontend es la experiencia de BusyNessy: un panel financiero para que una pyme entienda su caja actual, anticipe los próximos 30 días y convierta alertas en decisiones.
+
+## ✨ Experiencia principal
+
+- **Resumen:** saldo, ingresos, gastos y flujo neto.
+- **Movimientos:** búsqueda, filtros y detalle del historial.
+- **Gastos:** cargos recurrentes y presión operativa.
+- **Pronóstico:** proyección diaria, saldo mínimo y posible déficit.
+- **Salud financiera:** lectura rápida de la situación del negocio.
+- **Seguridad y alertas:** duplicados, cargos inusuales y comercios nuevos para revisar.
+- **Ajustes:** meta de reserva, texto grande y alto contraste.
+
+El onboarding conecta la identidad de Clerk con una empresa y una cuenta de Nessie. El navegador solo consume `/api`; las claves privadas permanecen en el backend.
+
+## 🧱 Tecnologías
+
+- React 19 + Vite ⚛️
+- Clerk React para autenticación 🔐
+- React Compiler mediante Babel ⚡
+- Proxy local `/api` hacia `http://127.0.0.1:8787`
+- CSS propio responsive, con soporte para accesibilidad
+
+## 🚀 Ejecutar localmente
+
+Requiere Node.js 22 LTS (Node.js 20.9 o superior también funciona).
+
+```bash
+npm install
+copy .env.example .env.local
+npm run dev -- --host 127.0.0.1 --port 5173
+```
+
+En macOS o Linux, sustituye `copy` por `cp`.
+
+Completa `Frontend/.env.local`:
+
+```env
+VITE_CLERK_PUBLISHABLE_KEY=tu_clave_publica_de_clerk
+```
+
+El backend debe estar activo en `http://127.0.0.1:8787`. Consulta la [guía del backend](../backend/README.md) para configurarlo.
+
+## 🛠️ Scripts
+
+| Comando | Uso |
+| --- | --- |
+| `npm run dev` | Servidor de desarrollo del dashboard. |
+| `npm run console` | Consola administrativa en `http://127.0.0.1:5174/consola/`. |
+| `npm run build` | Compilación de producción. |
+| `node dashboard.test.mjs` | Comprobaciones del dashboard. |
+
+La consola está disponible únicamente para sesiones de Clerk cuyo `publicMetadata.role` sea `admin`.
+
+## 🗂️ Puntos de entrada
+
+- `src/App.jsx`: autenticación, onboarding y composición de vistas.
+- `src/Dashboard.jsx`: panel financiero principal.
+- `src/Console.jsx`: operaciones administrativas.
+- `src/api.js`: cliente HTTP del backend.
+- `src/components.jsx`: piezas visuales compartidas.
+
+> ℹ️ `src/components/` contiene componentes de una iteración anterior. La aplicación activa importa los módulos del nivel superior de `src/`.
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
