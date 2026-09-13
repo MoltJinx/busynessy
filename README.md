@@ -1,5 +1,7 @@
 # busynessy
 
+> 🧪 **Rama experimental de middleware.** Contiene notas y pruebas de seguridad relacionadas con middleware. No es una línea de despliegue; para revisar el producto funcional usa [`main`](https://github.com/MoltJinx/busynessy/tree/main).
+
 > Business, not messy.
 
 ## Predictive cash-flow intelligence for small businesses
