@@ -137,14 +137,25 @@ function send(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+const CORS_ORIGINS = ["http://127.0.0.1:4173", "http://localhost:4173", "http://127.0.0.1:5173", "http://localhost:5173", "http://127.0.0.1:5174", "http://localhost:5174"];
+function allowedOrigin(origin) {
+  if (origin === "http://127.0.0.1:4173") return "http://127.0.0.1:4173";
+  if (origin === "http://localhost:4173") return "http://localhost:4173";
+  if (origin === "http://127.0.0.1:5173") return "http://127.0.0.1:5173";
+  if (origin === "http://localhost:5173") return "http://localhost:5173";
+  if (origin === "http://127.0.0.1:5174") return "http://127.0.0.1:5174";
+  if (origin === "http://localhost:5174") return "http://localhost:5174";
+  return "http://127.0.0.1:4173";
+}
+
 // El alta inicial crea un historial completo y necesita un presupuesto mayor
 // que una operación individual, sin reintentar POSTs si falla la red.
 http.createServer((req, res) => nessieTrace.run({ requestId: randomUUID(), deadline:Date.now()+240000 }, async () => {
   res.setHeader('X-Request-Id',nessieTrace.getStore().requestId);
   res.setHeader('Access-Control-Expose-Headers','X-Request-Id, Retry-After');
-  const origins = ["http://127.0.0.1:4173", "http://localhost:4173", "http://127.0.0.1:5173", "http://localhost:5173", "http://127.0.0.1:5174", "http://localhost:5174"];
-  if (req.headers.origin && !origins.includes(req.headers.origin)) return send(res,403,{error:"Origen no permitido"});
-  res.origin = req.headers.origin;
+  const origin = typeof req.headers.origin === 'string' ? req.headers.origin : '';
+  if (origin && !CORS_ORIGINS.includes(origin)) return send(res,403,{error:"Origen no permitido"});
+  res.origin = allowedOrigin(origin);
   if (req.method === "OPTIONS") return send(res, 204, {});
   try {
     if (!['GET', 'HEAD'].includes(req.method) && req.headers['x-busynessy-request'] !== '1') throw fault(403, 'Solicitud no permitida.');
